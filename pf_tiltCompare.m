@@ -1,30 +1,29 @@
 % Processes pf tilt
-startDate = datenum('Nov 18, 2018');
-endDate = datenum('Nov 28, 2018');
-endDate = datenum('Nov 23, 2018');
+startDate = datenum('Nov 20, 2018');
+endDate = datenum('Nov 27, 2018');
 np = 3;
 
 
-load pfdata
+load ../calibrations/PinonFlat/pfdata
 
-i = tilt1Dec100.t>=startDate & tilt1Dec100.t<endDate;
-x1 = tilt1Dec100.a(i,1);
+i = dataDec1.t>=startDate & dataDec1.t<endDate;
+x1 = dataDec1.a(i,1);
 x1 = detrend(x1);
-y1 = tilt1Dec100.a(i,2);
+y1 = dataDec1.a(i,2);
 y1 = detrend(y1);
-t1 = tilt1Dec100.t(i);
+t1 = dataDec1.t(i);
 n = length(t1);
 
-i = tilt2Dec100.t>=startDate & tilt2Dec100.t<endDate;
-x2 = tilt2Dec100.a(i,1);
+i = tilt2Dec1.t>=startDate & tilt2Dec1.t<endDate;
+x2 = tilt2Dec1.a(i,1);
 x2 = detrend(x2);
-y2 = tilt2Dec100.a(i,2);
+y2 = tilt2Dec1.a(i,2);
 y2 = detrend(y2);
-t2 = tilt2Dec100.t(i);
+t2 = tilt2Dec1.t(i);
 
-x1 = x1 - polyval(polyfit(t1,x1,np),t1);
+x1 = x1 - polyval(polyfit(t1-t1(1),x1,np),t1-t1(1));
 x2 = x2 - polyval(polyfit(t2,x2,np),t2);
-y1 = y1 - polyval(polyfit(t1,y1,np),t1);
+y1 = y1 - polyval(polyfit(t1-t1(1),y1,np),t1-t1(1));
 y2 = y2 - polyval(polyfit(t2,y2,np),t2);
 
 figure
@@ -37,7 +36,7 @@ title('X - channel')
 subplot(212)
 plot(t1,y1,t2,y2)
 datetick
-title('X - channel')
+title('Y - channel')
 hold on
 
 

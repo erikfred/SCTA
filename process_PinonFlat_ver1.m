@@ -1,115 +1,115 @@
 % Script to process Pinon Flat Flips
-% This is the first try and is very simple just aimed at making sure data 
+% This is the first try and is very simple just aimed at making sure data
 % acquisition during flips is okay and that tilt data plots well
 
 getData = false;
 
 p.dadT=[NaN NaN NaN];
 p.TRef = 30;
-% 
+%
 % Days with flips
 startDate = datenum('2018-10-17');
 waitTiltDays = 4;
 
-if getData 
-  flipInfoAll = [];
-  tilt1Dec1 = [];
-  tilt2Dec1 = [];
-  tilt1Dec100 = [];
-  tilt2Dec100 = [];
-  sctaDec1 = [];
-  sctaDec100 = [];
-
-  % Load Data
-  for dn = startDate:now
-    testDate = datestr(dn);
-    scta = get_sctaDay('/Users/wilcock/Mydrive/APL/SCTA-Share/OOI-PF/SCTA-PF/ParsedData',testDate);
-    tilt1 = get_tiltDay('/Users/wilcock/Mydrive/APL/SCTA-Share/OOI-PF/SCTA-PF/ParsedData','SCTA-Tilt_20_19_',testDate);
-    tilt2 = get_tiltDay('/Users/wilcock/Mydrive/APL/SCTA-Share/OOI-PF/SCTA-PF/ParsedData','SCTA-Tilt_22_25_',testDate);
-
-    if isempty(scta.t)
-
-      fprintf(['No data on ' testDate '\n\n'])
-
-    else
-
-      % Decimate the data
-      [scta1DayDec] = decimate_SCTA(scta,1);
-      [sctaDec1] = decimate_SCTA(scta,1,sctaDec1);
-      [sctaDec100] = decimate_SCTA(scta,100,sctaDec100);
-      if dn-startDate>=waitTiltDays
-        [tilt1Dec100] = decimate_SCTA(tilt1,100,tilt1Dec100);
-        [tilt2Dec100] = decimate_SCTA(tilt2,100,tilt2Dec100);
-        if isempty(tilt1Dec1) 
-          tilt1Dec1 = tilt1;
-          tilt2Dec1 = tilt2;
+if getData
+    flipInfoAll = [];
+    tilt1Dec1 = [];
+    tilt2Dec1 = [];
+    tilt1Dec100 = [];
+    tilt2Dec100 = [];
+    sctaDec1 = [];
+    sctaDec100 = [];
+    
+    % Load Data
+    for dn = startDate:now
+        testDate = datestr(dn);
+        scta = get_sctaDay('/Volumes/GoogleDrive/My Drive/Oceanography/SCTA-Share/OOI-PF/SCTA-PF (1)/ParsedData',testDate);
+        tilt1 = get_tiltDay('/Volumes/GoogleDrive/My Drive/Oceanography/SCTA-Share/OOI-PF/SCTA-PF (1)/ParsedData','SCTA-Tilt_20_19_',testDate);
+        tilt2 = get_tiltDay('/Volumes/GoogleDrive/My Drive/Oceanography/SCTA-Share/OOI-PF/SCTA-PF (1)/ParsedData','SCTA-Tilt_22_25_',testDate);
+        
+        if isempty(scta.t)
+            
+            fprintf(['No data on ' testDate '\n\n'])
+            
         else
-          tilt1Dec1 = merge_oneElementStructure(tilt1Dec1, tilt1);
-          tilt2Dec1 = merge_oneElementStructure(tilt2Dec1, tilt2);
-        end      
-      end
-
-      % Find Flips
-      p.cosThreshVert = 0.99;         % 0.99 = 8 degrees from vertical - threshold for a flip
-      p.minTime4Flip = 100;           % Minimum duration in seconds for a flip to be counted
-      p.complexRange80 = 1e-2;        % If 90% value - 10% value is greater than this then not a simple flip into one orientation
-      p.cosThreshNorm = 0.9996;       % Threshold for normal (one channel vertical) orientation (2°)
-      p.tBufferNorm = 120;            % Make non-normal any sample within this of a non-normal orientation
-      p.nMadNorm = 6;                 % If total acceleration in normal position is this many MADs from the median, make it non-normal
-      [flipInfo,lNormOrt] = find_flip(scta1DayDec.t,scta1DayDec.a,scta1DayDec.as,p);
-
-      if isempty(flipInfo(1).t)
-
-        fprintf(['No flips found on ' testDate '\n\n'])
-
-      elseif length(flipInfo(1).t)~=3
-
-        warning(['Unextpected number of flips found on ' testDate])
-        keyboard
-
-      else
-
-        % Process Flips
-        p.daMax = 1e-4;                 % During a calibration successive samples will not change by more than this
-        p.tCalLim = [60 90];            % Time limits for calibration in seconds since start of stable output
-        flipInfo2 = analyze_flips(scta1DayDec,flipInfo,p,1);
-  %         disp(['Paused for ' testDates{i}])
-
-        if isempty(flipInfoAll)
-          flipInfoAll = flipInfo2(1);
-          for i=2:length(flipInfo2)
-            flipInfoAll = merge_oneElementStructure(flipInfoAll, flipInfo2(i), 'normalOrientation');
-          end
-        else
-          for i=1:length(flipInfo2)
-            flipInfoAll = merge_oneElementStructure(flipInfoAll, flipInfo2(i), 'normalOrientation');
-          end
+            
+            % Decimate the data
+            [scta1DayDec] = decimate_SCTA(scta,1);
+            [sctaDec1] = decimate_SCTA(scta,1,sctaDec1);
+            [sctaDec100] = decimate_SCTA(scta,100,sctaDec100);
+            if dn-startDate>=waitTiltDays
+                [tilt1Dec100] = decimate_SCTA(tilt1,100,tilt1Dec100);
+                [tilt2Dec100] = decimate_SCTA(tilt2,100,tilt2Dec100);
+                if isempty(tilt1Dec1)
+                    tilt1Dec1 = tilt1;
+                    tilt2Dec1 = tilt2;
+                else
+                    tilt1Dec1 = merge_oneElementStructure(tilt1Dec1, tilt1);
+                    tilt2Dec1 = merge_oneElementStructure(tilt2Dec1, tilt2);
+                end
+            end
+            
+            % Find Flips
+            p.cosThreshVert = 0.99;         % 0.99 = 8 degrees from vertical - threshold for a flip
+            p.minTime4Flip = 100;           % Minimum duration in seconds for a flip to be counted
+            p.complexRange80 = 1e-2;        % If 90% value - 10% value is greater than this then not a simple flip into one orientation
+            p.cosThreshNorm = 0.9996;       % Threshold for normal (one channel vertical) orientation (2°)
+            p.tBufferNorm = 120;            % Make non-normal any sample within this of a non-normal orientation
+            p.nMadNorm = 6;                 % If total acceleration in normal position is this many MADs from the median, make it non-normal
+            [flipInfo,lNormOrt] = find_flip(scta1DayDec.t,scta1DayDec.a,scta1DayDec.as,p);
+            
+            if isempty(flipInfo(1).t)
+                
+                fprintf(['No flips found on ' testDate '\n\n'])
+                
+            elseif length(flipInfo(1).t)~=3
+                
+                warning(['Unextpected number of flips found on ' testDate])
+                keyboard
+                
+            else
+                
+                % Process Flips
+                p.daMax = 1e-4;                 % During a calibration successive samples will not change by more than this
+                p.tCalLim = [60 90];            % Time limits for calibration in seconds since start of stable output
+                flipInfo2 = analyze_flips(scta1DayDec,flipInfo,p,1);
+                %         disp(['Paused for ' testDates{i}])
+                
+                if isempty(flipInfoAll)
+                    flipInfoAll = flipInfo2(1);
+                    for i=2:length(flipInfo2)
+                        flipInfoAll = merge_oneElementStructure(flipInfoAll, flipInfo2(i), 'normalOrientation');
+                    end
+                else
+                    for i=1:length(flipInfo2)
+                        flipInfoAll = merge_oneElementStructure(flipInfoAll, flipInfo2(i), 'normalOrientation');
+                    end
+                end
+            end
         end
-      end
     end
-  end
-
-  if length(tilt1Dec100.t) > length(tilt2Dec100.t)
-    n = length(tilt2Dec100.t);
-    tilt1Dec100.t = tilt1Dec100.t(1:n);
-    tilt1Dec100.a = tilt1Dec100.a(1:n,:);
-    tilt1Dec100.T = tilt1Dec100.T(1:n);
-    tilt1Dec100.n = tilt1Dec100.n(1:n);
-  elseif length(tilt1Dec100.t) < length(tilt2Dec100.t)
-    n = length(tilt1Dec100.t);
-    tilt2Dec100.t = tilt2Dec100.t(1:n);
-    tilt2Dec100.a = tilt2Dec100.a(1:n,:);
-    tilt2Dec100.T = tilt2Dec100.T(1:n);
-    tilt2Dec100.n = tilt2Dec100.n(1:n);
-  end
-
-  save pfdata tilt1Dec1 tilt2Dec1 tilt1Dec100 tilt2Dec100 sctaDec1 sctaDec100 p flipInfoAll
-
+    
+    if length(tilt1Dec100.t) > length(tilt2Dec100.t)
+        n = length(tilt2Dec100.t);
+        tilt1Dec100.t = tilt1Dec100.t(1:n);
+        tilt1Dec100.a = tilt1Dec100.a(1:n,:);
+        tilt1Dec100.T = tilt1Dec100.T(1:n);
+        tilt1Dec100.n = tilt1Dec100.n(1:n);
+    elseif length(tilt1Dec100.t) < length(tilt2Dec100.t)
+        n = length(tilt1Dec100.t);
+        tilt2Dec100.t = tilt2Dec100.t(1:n);
+        tilt2Dec100.a = tilt2Dec100.a(1:n,:);
+        tilt2Dec100.T = tilt2Dec100.T(1:n);
+        tilt2Dec100.n = tilt2Dec100.n(1:n);
+    end
+    
+    save pfdata tilt1Dec1 tilt2Dec1 tilt1Dec100 tilt2Dec100 sctaDec1 sctaDec100 p flipInfoAll
+    
 else
-  load pfdata
+    load pfdata
 end
-  
-  % Consistency
+
+% Consistency
 disp('Uncorrected (1st - 2nd) - mean(1st - 2nd)')
 (flipInfoAll.gCal(1:3:7) - flipInfoAll.gCal(3:3:9)) - mean(flipInfoAll.gCal(1:3:7) - flipInfoAll.gCal(3:3:9))
 disp('T Corrected (1st - 2nd) - mean(1st - 2nd)')

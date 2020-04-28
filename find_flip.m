@@ -38,7 +38,7 @@ function [flipInfo,lNormOrt] = find_flip(t,a,as,p)
 % orientation for each sample is set to 
 %    0 if no channel is vertical
 %    1, 2, or 3 if that channel is vertical up
-%    -1, -2, or -3 if that channel is vertical up
+%    -1, -2, or -3 if that channel is vertical down
 [~,orientation] = max(abs(a),[],2);
 [~,temp] = max(a,[],2);
 orientation(orientation~=temp) = -orientation(orientation~=temp);
@@ -80,7 +80,7 @@ i = (t(i1)-t(i0))>=p.minTime4Flip/86400;
 i0 = i0(i);
 i1 = i1(i);
 
-% Now length of orientation is adjusted from lenght of time series to number of flips
+% Now length of orientation is adjusted from length of time series to number of flips
 orientation = orientation(i0);
 
 % Set the flip Information structure

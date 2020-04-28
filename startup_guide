@@ -1,0 +1,9 @@
+STARTUP GUIDE
+
+1. Update git
+  $ git clone https://github.com/git/git
+2. Set git username and password
+  $ git config --global user.name "<your name here>"
+  $ git config --global user.email "<your email here>"
+3. Enable osx keychain (optional)
+  $ git config --global credential.helper osxkeychain

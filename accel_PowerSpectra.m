@@ -1,5 +1,5 @@
-doWhat = [false true false];
-getData = [false false false];
+doWhat = [true false false];
+getData = [true false false];
 
 
 %% Pinon Flat Acceleration
@@ -13,7 +13,7 @@ if doWhat(1)
 
   if getData(1) 
     for testDate = startDate:endDate-1
-      scta = get_sctaDay('/Users/wilcock/Mydrive/APL/SCTA-Share/OOI-PF/SCTA-PF (1)/ParsedData',testDate);
+      scta = get_sctaDay('/Volumes/GoogleDrive/My Drive/Oceanography/SCTA-Share/OOI-PF/SCTA-PF (1)/ParsedData',testDate);
 
       for i=1:3
         scta.a(:,i) = detrend(scta.a(:,i));

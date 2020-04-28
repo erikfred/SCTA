@@ -2,7 +2,7 @@ function [lGlT,qGlT]=solve_Tdependence(t,g,T,tSkip)
 % Solves for temperature dependence of vertical accelerometer signal
 %
 % Usage
-%   [lGlT qGlT lGqT qGqT]=solv_eTdependence(t,a,T,tSkip)
+%   [lGlT qGlT lGqT qGqT]=solve_Tdependence(t,a,T,tSkip)
 %
 % Let measured signal g(t) = a + bt + [ct^2] + dT(t) + eT(t)^2
 %   where a-e are unknown constants, 
