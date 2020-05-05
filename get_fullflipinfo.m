@@ -107,3 +107,30 @@ for dayn = daylist'
         end
     end
 end
+
+save ../calibrations/Axial/detailed_flipInfo flipInfoSome
+
+% write to matrix
+calmat=floor(flipInfoSome.t(1:5:end));
+calmat(:,2)=flipInfoSome.gCal(1:5:end);
+calmat(:,3)=flipInfoSome.xCal(1:5:end);
+calmat(:,4)=flipInfoSome.yCal(1:5:end);
+calmat(:,5)=flipInfoSome.zCal(1:5:end);
+calmat(:,6)=flipInfoSome.gCal(2:5:end);
+calmat(:,7)=flipInfoSome.xCal(2:5:end);
+calmat(:,8)=flipInfoSome.yCal(2:5:end);
+calmat(:,9)=flipInfoSome.zCal(2:5:end);
+calmat(:,10)=flipInfoSome.gCal(3:5:end);
+calmat(:,11)=flipInfoSome.xCal(3:5:end);
+calmat(:,12)=flipInfoSome.yCal(3:5:end);
+calmat(:,13)=flipInfoSome.zCal(3:5:end);
+calmat(:,14)=flipInfoSome.gCal(4:5:end);
+calmat(:,15)=flipInfoSome.xCal(4:5:end);
+calmat(:,16)=flipInfoSome.yCal(4:5:end);
+calmat(:,17)=flipInfoSome.zCal(4:5:end);
+calmat(:,18)=flipInfoSome.gCal(5:5:end);
+calmat(:,19)=flipInfoSome.xCal(5:5:end);
+calmat(:,20)=flipInfoSome.yCal(5:5:end);
+calmat(:,21)=flipInfoSome.zCal(5:5:end);
+
+writematrix(calmat,'../calibrations/Axial/detailed_flipInfo.xls')
