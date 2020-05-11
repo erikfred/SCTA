@@ -217,7 +217,7 @@ else
             subplot(411)
             hold on
             plot(data.t-data.t(1),data.as,'c','linewidth',1);
-            xlim([flipInfoSome.t(iflips(j))-data.t(1)+15/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
+            xlim([flipInfoSome.t(iflips(j))-data.t(1)+5/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
             ylabel('g_t_o_t (m/s^2)')
             set(gca,'xtick',[])
             title([orientation_strings{j} ' Calibration'])
@@ -226,7 +226,7 @@ else
             subplot(412)
             hold on
             plot(data.t-data.t(1),data.a(:,1),'c','linewidth',1);
-            xlim([flipInfoSome.t(iflips(j))-data.t(1)+15/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
+            xlim([flipInfoSome.t(iflips(j))-data.t(1)+5/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
             ylabel('x (m/s^2)')
             set(gca,'xtick',[])
             box on
@@ -234,7 +234,7 @@ else
             subplot(413)
             hold on
             plot(data.t-data.t(1),data.a(:,2),'c','linewidth',1);
-            xlim([flipInfoSome.t(iflips(j))-data.t(1)+15/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
+            xlim([flipInfoSome.t(iflips(j))-data.t(1)+5/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
             ylabel('y (m/s^2)')
             set(gca,'xtick',[])
             box on
@@ -242,7 +242,7 @@ else
             subplot(414)
             hold on
             plot(data.t-data.t(1),data.a(:,3),'c','linewidth',1);
-            xlim([flipInfoSome.t(iflips(j))-data.t(1)+15/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
+            xlim([0.8753 0.8763])
             ylabel('z (m/s^2)')
             datetick('x','keeplimits')
             box on
