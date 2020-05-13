@@ -59,7 +59,7 @@ if Axial
     xspandrift2=pxs2(1)*365;
     xs2_m=pxs2(1)*(flipInfoSome.t(4:5:end)-flipInfoSome.t(4))+pxs2(2);
     
-    [~,iys]=setdiff(floor(flipInfoSome.t),[bad_y,bad_negy]); iys=iys+1;
+    [~,iys]=setdiff(floor(flipInfoSome.t),[bad_x1,bad_negx]); iys=iys+1;
     pys=polyfit(flipInfoSome.t(iys)-flipInfoSome.t(iys(1)),...
         (flipInfoSome.gCalTCor(iys)+flipInfoSome.gCalTCor(iys+1))/2,1);
     yspandrift=pys(1)*365;
@@ -69,16 +69,19 @@ if Axial
     figure(51)
     clf
     hold on
-    plot(flipInfoSome.t(4:5:end),flipInfoSome.gCalTCor(4:5:end)-mean(x2_m),'+k','markersize',18);
-    plot(flipInfoSome.t(5:5:end),flipInfoSome.gCalTCor(5:5:end)-mean(negx_m),'xk','markersize',18);
+    plot(flipInfoSome.t(4:5:end),flipInfoSome.gCalTCor(4:5:end)-mean(flipInfoSome.gCalTCor(4:5:end)),'+k','markersize',18);
+    plot(flipInfoSome.t(5:5:end),flipInfoSome.gCalTCor(5:5:end)-mean(flipInfoSome.gCalTCor(5:5:end)),'xk','markersize',18);
     plot(flipInfoSome.t(ixs2),(flipInfoSome.gCalTCor(ixs2)+flipInfoSome.gCalTCor(ixs2+1))/2 ...
-        -mean(xs2_m),'^k','markerfacecolor','k','markersize',18);
+        -mean((flipInfoSome.gCalTCor(ixs2)+flipInfoSome.gCalTCor(ixs2+1))/2),'^k','markerfacecolor','k','markersize',18);
     plot(flipInfoSome.t(4:5:end),x2_m-mean(x2_m),'--k')
     plot(flipInfoSome.t(5:5:end),negx_m-mean(negx_m),'--k')
     plot(flipInfoSome.t(4:5:end),xs2_m-mean(xs2_m),'k','linewidth',1)
     text(flipInfoSome.t(end)-40,x2_m(end)-mean(x2_m)+10^-5,[num2str(round(x2drift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,negx_m(end)-mean(negx_m)-10^-5,[num2str(round(negxdrift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,xs2_m(end)-mean(xs2_m)+10^-5,[num2str(round(xspandrift2*10^5,2)) ' \mug/yr'],'fontsize',14)
+%     xl = xlim; yl = ylim;
+%     plot([0 0]+xl(1)+diff(xl)/10,mean(yl)+[0 0.00001],'-k')
+%     text(xl(1)+diff(xl)/9,mean(yl)+0.000005,'10^{-6} g')
     legend('+X calibration','-X calibration','X span','location','northwest')
     datetick
     title({'Axial SCTA X Calibrations',[datestr(flipInfoSome.t(73),'mmm dd, yyyy') ...
@@ -91,23 +94,26 @@ if Axial
     fh=gcf;
     fh.PaperUnits='inches';
     fh.PaperPosition=[0 0 11 8.5];
-    print -djpeg ../calibrations/Axial/span/xspandrift.jpeg
-    print -dtiff ../calibrations/Axial/span/xspandrift.tiff -r300
-%     !open ../calibrations/Axial/span/xspandrift.jpeg
+    print -djpeg ../calibrations/Axial/span/xspandrift_noDecJan.jpeg
+    print -dtiff ../calibrations/Axial/span/xspandrift_noDecJan.tiff -r300
+%     !open ../calibrations/Axial/span/xspandrift3.jpeg
     
     figure(52)
     clf
     hold on
-    plot(flipInfoSome.t(2:5:end),flipInfoSome.gCalTCor(2:5:end)-mean(y_m),'+k','markersize',18);
-    plot(flipInfoSome.t(3:5:end),flipInfoSome.gCalTCor(3:5:end)-mean(negy_m),'xk','markersize',18);
-    plot(flipInfoSome.t(iys),(flipInfoSome.gCalTCor(iys)+flipInfoSome.gCalTCor(iys+1))/2 ...
-        -mean(ys_m),'^k','markerfacecolor','k','markersize',18);
-    plot(flipInfoSome.t(2:5:end),y_m-mean(y_m),'--k')
-    plot(flipInfoSome.t(3:5:end),negy_m-mean(negy_m),'--k')
-    plot(flipInfoSome.t(2:5:end),ys_m-mean(ys_m),'k','linewidth',1)
-    text(flipInfoSome.t(end)-40,y_m(end)-mean(y_m)+10^-5,[num2str(round(ydrift*10^5,2)) ' \mug/yr'],'fontsize',14)
-    text(flipInfoSome.t(end)-40,negy_m(end)-mean(negy_m)-10^-5,[num2str(round(negydrift*10^5,2)) ' \mug/yr'],'fontsize',14)
-    text(flipInfoSome.t(end)-40,ys_m(end)-mean(ys_m)+10^-5,[num2str(round(yspandrift*10^5,2)) ' \mug/yr'],'fontsize',14)
+    plot(flipInfoSome.t(sbset_y1),flipInfoSome.gCalTCor(sbset_y1)-mean(flipInfoSome.gCalTCor(sbset_y1)),'xb','markersize',18);
+    plot(flipInfoSome.t(sbset_y2),flipInfoSome.gCalTCor(sbset_y2)-mean(flipInfoSome.gCalTCor(sbset_y2)),'+b','markersize',18);
+    plot(flipInfoSome.t(sbset_y2),(flipInfoSome.gCalTCor(sbset_y1)+flipInfoSome.gCalTCor(sbset_y2))/2 ...
+        -mean((flipInfoSome.gCalTCor(sbset_y1)+flipInfoSome.gCalTCor(sbset_y2))/2),'^b','markerfacecolor','b','markersize',18);
+    plot(flipInfoSome.t(sbset_y1),y1_m,'--b')
+    plot(flipInfoSome.t(sbset_y2),y2_m,'--b')
+    plot(flipInfoSome.t(sbset_y2),ys_m,'b','linewidth',1)
+    text(flipInfoSome.t(end)-40,y1_m(end)+10^-6,[num2str(round(ydrift*10^5,2)) ' \mug/yr'],'fontsize',14)
+    text(flipInfoSome.t(end)-40,y2_m(end)-10^-6,[num2str(round(y2drift*10^5,2)) ' \mug/yr'],'fontsize',14)
+    text(flipInfoSome.t(end)-40,ys_m(end)+10^-6,[num2str(round(yspandrift*10^5,2)) ' \mug/yr'],'fontsize',14)
+%     xl = xlim; yl = ylim;
+%     plot([0 0]+xl(1)+diff(xl)/10,mean(yl)+[0 0.00001],'-k')
+%     text(xl(1)+diff(xl)/9,mean(yl)+0.000005,'10^{-6} g')
     legend('+Y calibration','-Y calibration','Y span','location','northwest')
     datetick
     title({'Axial SCTA Y Calibrations',[datestr(flipInfoSome.t(73),'mmm dd, yyyy') ...
@@ -120,9 +126,9 @@ if Axial
     fh=gcf;
     fh.PaperUnits='inches';
     fh.PaperPosition=[0 0 11 8.5];
-    print -djpeg ../calibrations/Axial/span/yspandrift.jpeg
-    print -dtiff ../calibrations/Axial/span/yspandrift.tiff -r300
-%     !open ../calibrations/Axial/span/yspandrift.jpeg
+    print -djpeg ../calibrations/Axial/span/yspandrift_noDecJan.jpeg
+    print -dtiff ../calibrations/Axial/span/yspandrift_noDecJan.tiff -r300
+%     !open ../calibrations/Axial/span/yspandrift3.jpeg
 end
 
 %% Pinon Flat
