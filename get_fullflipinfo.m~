@@ -29,12 +29,7 @@ flipInfoSome=[];
 dataDec1=[];
 dataDec100=[];
 
-if exist('../calibrations/Axial/detailed_flipInfo.mat','file')
-    load('../calibrations/Axial/detailed_flipInfo');
-    [~,id,~]=unique(floor(flipInfoSome.t));
-    daylist2=floor(flipInfoSome.t(id));
-    daylist=setdiff(daylist,daylist2);
-end
+if exist(
 for dayn = daylist'
     data = get_sctaDay('/Volumes/GoogleDrive/My Drive/Oceanography/SCTA-Share/OOI-SCTA/ParsedData',dayn);
     
