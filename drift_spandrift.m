@@ -66,6 +66,35 @@ if Axial
     ys_m=pys(1)*(flipInfoSome.t(2:5:end)-flipInfoSome.t(2))+pys(2);
     
     % plotting
+    figure(50)
+    clf
+    hold on
+    plot(flipInfoSome.t(1:5:end),flipInfoSome.gCalTCor(1:5:end)-mean(x1_m),'+k','markersize',18);
+    plot(flipInfoSome.t(5:5:end),flipInfoSome.gCalTCor(5:5:end)-mean(negx_m),'xk','markersize',18);
+    plot(flipInfoSome.t(ixs1),(flipInfoSome.gCalTCor(ixs1)+flipInfoSome.gCalTCor(ixs1+4))/2 ...
+        -mean(xs1_m),'^k','markerfacecolor','k','markersize',18);
+    plot(flipInfoSome.t(1:5:end),x1_m-mean(x1_m),'--k')
+    plot(flipInfoSome.t(5:5:end),negx_m-mean(negx_m),'--k')
+    plot(flipInfoSome.t(1:5:end),xs1_m-mean(xs1_m),'k','linewidth',1)
+    text(flipInfoSome.t(end)-40,x1_m(end)-mean(x1_m)+10^-5,[num2str(round(x1drift*10^5,2)) ' \mug/yr'],'fontsize',14)
+    text(flipInfoSome.t(end)-40,negx_m(end)-mean(negx_m)-10^-5,[num2str(round(negxdrift*10^5,2)) ' \mug/yr'],'fontsize',14)
+    text(flipInfoSome.t(end)-40,xs1_m(end)-mean(xs1_m)+10^-5,[num2str(round(xspandrift1*10^5,2)) ' \mug/yr'],'fontsize',14)
+    legend('+X calibration','-X calibration','X span','location','northwest')
+    datetick
+    title({'Axial SCTA X Calibrations',[datestr(flipInfoSome.t(1),'mmm dd, yyyy') ...
+        ' - ' datestr(flipInfoSome.t(end),'mmm dd, yyyy')]})
+    ylabel('Acceleration (m/s^2)')
+    set(gca,'fontsize',18)
+    xtickangle(45)
+    box on
+    
+    fh=gcf;
+    fh.PaperUnits='inches';
+    fh.PaperPosition=[0 0 11 8.5];
+    print -djpeg ../calibrations/Axial/span/x1spandrift.jpeg
+    print -dtiff ../calibrations/Axial/span/x1spandrift.tiff -r300
+%     !open ../calibrations/Axial/span/x1spandrift.jpeg
+
     figure(51)
     clf
     hold on
@@ -81,7 +110,7 @@ if Axial
     text(flipInfoSome.t(end)-40,xs2_m(end)-mean(xs2_m)+10^-5,[num2str(round(xspandrift2*10^5,2)) ' \mug/yr'],'fontsize',14)
     legend('+X calibration','-X calibration','X span','location','northwest')
     datetick
-    title({'Axial SCTA X Calibrations',[datestr(flipInfoSome.t(73),'mmm dd, yyyy') ...
+    title({'Axial SCTA X Calibrations',[datestr(flipInfoSome.t(1),'mmm dd, yyyy') ...
         ' - ' datestr(flipInfoSome.t(end),'mmm dd, yyyy')]})
     ylabel('Acceleration (m/s^2)')
     set(gca,'fontsize',18)
@@ -91,9 +120,9 @@ if Axial
     fh=gcf;
     fh.PaperUnits='inches';
     fh.PaperPosition=[0 0 11 8.5];
-    print -djpeg ../calibrations/Axial/span/xspandrift.jpeg
-    print -dtiff ../calibrations/Axial/span/xspandrift.tiff -r300
-%     !open ../calibrations/Axial/span/xspandrift.jpeg
+    print -djpeg ../calibrations/Axial/span/x2spandrift.jpeg
+    print -dtiff ../calibrations/Axial/span/x2spandrift.tiff -r300
+%     !open ../calibrations/Axial/span/x2spandrift.jpeg
     
     figure(52)
     clf
@@ -110,7 +139,7 @@ if Axial
     text(flipInfoSome.t(end)-40,ys_m(end)-mean(ys_m)+10^-5,[num2str(round(yspandrift*10^5,2)) ' \mug/yr'],'fontsize',14)
     legend('+Y calibration','-Y calibration','Y span','location','northwest')
     datetick
-    title({'Axial SCTA Y Calibrations',[datestr(flipInfoSome.t(73),'mmm dd, yyyy') ...
+    title({'Axial SCTA Y Calibrations',[datestr(flipInfoSome.t(1),'mmm dd, yyyy') ...
         ' - ' datestr(flipInfoSome.t(end),'mmm dd, yyyy')]})
     ylabel('Acceleration (m/s^2)')
     set(gca,'fontsize',18)
