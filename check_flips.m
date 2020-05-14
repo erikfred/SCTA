@@ -9,13 +9,12 @@ load('../calibrations/Axial/detailed_flipInfo');
 
 multiplots=true;
 
-[~,id,~]=unique(floor(flipInfoAll.t));
-daylist=floor(flipInfoAll.t(id));
-% daylist=daylist(end-4:end); % just a few of the most recent
-% daylist=daylist(26:end); % eveything since start of 5-position calibration
-keyboard
-
 if ~multiplots
+    [~,id,~]=unique(floor(flipInfoAll.t));
+    daylist=floor(flipInfoAll.t(id));
+    % daylist=daylist(end-4:end); % just a few of the most recent
+    daylist=daylist(26:end); % eveything since start of 5-position calibration
+
     legstr={};
     figure(22), hold on;
     figure(23), hold on;
@@ -175,13 +174,16 @@ if ~multiplots
     subplot(312),legend(legstr)
     subplot(313),legend(legstr)
 else
+    daylist=unique(floor(flipInfoSome.t)); % every calibration day since 5-orientation scheme
+    
     % identify bad calibrations
     bad_x1=[datenum(2019,12,01) datenum(2020,01,08) datenum(2020,01,15) datenum(2020,01,22) datenum(2020,01,29)];
     bad_y=[datenum(2019,12,01) datenum(2020,01,08)];
     bad_negy=[datenum(2019,12,01) datenum(2020,01,08) datenum(2020,01,15) datenum(2020,01,22) datenum(2020,02,19) datenum(2020,03,18)];
     bad_x2=[datenum(2019,12,01) datenum(2020,01,08) datenum(2020,01,15) datenum(2020,01,22) datenum(2020,04,29)];
     bad_negx=[datenum(2019,10,15) datenum(2019,11,01) datenum(2019,12,01) datenum(2020,01,08) datenum(2020,01,22)];
-    bads=cat(2,bad_x1,bad_y,bad_negy,bad_x2,bad_negx); bads=unique(bads);
+    bads={bad_x1, bad_y, bad_negy, bad_x2, bad_negx};
+    ubads=cat(2,bad_x1,bad_y,bad_negy,bad_x2,bad_negx); ubads=unique(ubads);
     
     orientation_strings={'+X1','+Y','-Y','+X2','-X'};
     save_strings={'x1','y','negy','x2','negx'};
@@ -207,67 +209,50 @@ else
     pnegx=polyfit(flipInfoSome.t(inegx)-flipInfoSome.t(inegx(1)),flipInfoSome.gCal(inegx),1);
     negx_m=pnegx(1)*(flipInfoSome.t(5:5:end)-flipInfoSome.t(5))+pnegx(2);
     
+    % combine models into single matrix
+    mods=[x1_m y_m negy_m x2_m negx_m];
+    
     for i=1:length(daylist)
         dayn=daylist(i);
-        if sum(bads==dayn) % skip the bad cals for now
+        if sum(ubads==dayn) % skip the bad cals for now
             continue
         end
         datestr(dayn)
         data=[];
-        cha={'MNE','MNN','MNZ','MKA'};
-        chastr={'a(:,1)','a(:,2)','a(:,3)','T'};
+        cha={'MNE','MNN','MNZ'};
         for m=1:length(cha)
             IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
             if ~exist(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed'],'file')
-                cha={'BNE','BNN','BNZ','BKA'};
+                cha={'BNE','BNN','BNZ'};
                 if ~exist(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed'],'file')
                     IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1);
                 end
             end
             temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed']);
             data.t=cat(1,temp.t);
-            eval(['data.' chastr{m} '=cat(1,temp.d)/10^7;']);
+            data.a(:,m)=cat(1,temp.d)/10^7;
         end
-        data.as=sqrt(data.a(:,1).^2+data.a(:,2).^2+data.a(:,3).^2);
+        temp=sqrt(data.a(:,1).^2+data.a(:,2).^2+data.a(:,3).^2);
+        data.a=cat(2,temp,data.a);
         % probably worthwhile to add in something that trims data to just
         % the necessary 10 minute window
         
         for j=1:5
             iflips=find(floor(flipInfoSome.t)==dayn);
-            
+            label_strings={'g_t_o_t (m/s^2)','x (m/s^2)','y (m/s^2)','z (m/s^2)'};
             figure(j)
             subplot(411)
-            hold on
-            plot(data.t-data.t(1),data.as,'c','linewidth',1);
-            xlim([flipInfoSome.t(iflips(j))-data.t(1)+15/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
-            ylabel('g_t_o_t (m/s^2)')
-            set(gca,'xtick',[])
             title([orientation_strings{j} ' Calibration'])
-            box on
-            
-            subplot(412)
-            hold on
-            plot(data.t-data.t(1),data.a(:,1),'c','linewidth',1);
-            xlim([flipInfoSome.t(iflips(j))-data.t(1)+15/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
-            ylabel('x (m/s^2)')
-            set(gca,'xtick',[])
-            box on
-            
-            subplot(413)
-            hold on
-            plot(data.t-data.t(1),data.a(:,2),'c','linewidth',1);
-            xlim([flipInfoSome.t(iflips(j))-data.t(1)+15/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
-            ylabel('y (m/s^2)')
-            set(gca,'xtick',[])
-            box on
-            
-            subplot(414)
-            hold on
-            plot(data.t-data.t(1),data.a(:,3),'c','linewidth',1);
-            xlim([flipInfoSome.t(iflips(j))-data.t(1)+15/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
-            ylabel('z (m/s^2)')
+            for k=1:4
+                subplot(4,1,k)
+                hold on
+                plot(data.t-data.t(1),data.a(:,k),'c','linewidth',1);
+                xlim([flipInfoSome.t(iflips(j))-data.t(1)+15/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
+                ylabel(label_strings{k})
+                set(gca,'xtick',[])
+                box on
+            end
             datetick('x','keeplimits')
-            box on
         end
     end
     
@@ -280,308 +265,60 @@ else
 %         saveas(gcf,['../calibrations/Axial/weird_cals/multiplots/goodcals_' save_strings{l} '.fig'])
 %     end
     
-% make bads and ubads, use while structure to go through all iterations,
-% whittling list after each plot
-    for k=1:length(bads)
-        dayn=bads(k);
+    % add in curves from bad calibrations, saving individually
+    for k=1:length(ubads)
+        dayn=ubads(k);
         data=[];
-        cha={'MNE','MNN','MNZ','MKA'};
-        chastr={'a(:,1)','a(:,2)','a(:,3)','T'};
+        cha={'MNE','MNN','MNZ'};
         for m=1:length(cha)
             IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
             if ~exist(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed'],'file')
-                cha={'BNE','BNN','BNZ','BKA'};
+                cha={'BNE','BNN','BNZ'};
                 if ~exist(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed'],'file')
                     IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1);
                 end
             end
             temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed']);
             data.t=cat(1,temp.t);
-            eval(['data.' chastr{m} '=cat(1,temp.d)/10^7;']);
+            data.a(:,m)=cat(1,temp.d)/10^7;
         end
-        data.as=sqrt(data.a(:,1).^2+data.a(:,2).^2+data.a(:,3).^2);
+        temp=sqrt(data.a(:,1).^2+data.a(:,2).^2+data.a(:,3).^2);
+        data.a=cat(2,temp,data.a);
         
-        ib=find(dayn==floor(flipInfoSome.t(1:5:end)));
-        if sum(dayn==bad_x1)
-            n=1;
-            % calculate theoretical z for good cal
-            zg=sqrt(x1_m(ib)^2-flipInfoSome.xCal(n+(ib-1)*5)^2-flipInfoSome.yCal(n+(ib-1)*5)^2);
-            
-            figure(n)
-            subplot(411)
-            h1=plot(data.t-data.t(1),data.as,'k','linewidth',1);
-            h1b=plot([data.t(1) data.t(end)]-data.t(1),[x1_m(ib) x1_m(ib)],'k--','linewidth',1);
-            title([datestr(dayn) ' +X1 Calibration'])
-            lim_y=ylim;
-            hp1=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp1.EdgeColor='none';
-            hp1.FaceVertexAlphaData=0.2;
-            hp1.FaceAlpha='flat';
-            
-            subplot(412)
-            h2=plot(data.t-data.t(1),data.a(:,1),'k','linewidth',1);
-            lim_y=ylim;
-            hp2=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp2.EdgeColor='none';
-            hp2.FaceVertexAlphaData=0.2;
-            hp2.FaceAlpha='flat';
-            
-            subplot(413)
-            h3=plot(data.t-data.t(1),data.a(:,2),'k','linewidth',1);
-            lim_y=ylim;
-            hp3=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp3.EdgeColor='none';
-            hp3.FaceVertexAlphaData=0.2;
-            hp3.FaceAlpha='flat';
-            
-            subplot(414)
-            h4=plot(data.t-data.t(1),data.a(:,3),'k','linewidth',1);
-            h4b=plot([data.t(1) data.t(end)]-data.t(1),[zg zg],'k--','linewidth',1);
-            lim_y=ylim;
-            hp4=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp4.EdgeColor='none';
-            hp4.FaceVertexAlphaData=0.2;
-            hp4.FaceAlpha='flat';
-            
-            fh=gcf;
-            fh.PaperUnits='inches';
-            fh.PaperPosition=[0 0 8.5 11];
-            print(['../calibrations/Axial/weird_cals/multiplots/' datestr(dayn,29) '_' save_strings{n}],'-dtiff','-r300')
-            
-            delete([h1 h1b h2 h3 h4 h4b hp1 hp2 hp3 hp4])
+        ib=find(dayn==floor(flipInfoSome.t(1:5:end))); % determine which day we're looking at
+        for n=1:5
+            badcheck=bads{n};
+            if sum(dayn==badcheck)
+                % calculate theoretical z for good cal
+                zg=sqrt(mods(ib,n)^2-flipInfoSome.xCal(n+(ib-1)*5)^2-flipInfoSome.yCal(n+(ib-1)*5)^2);
+                if flipInfoSome.zCal(n+(ib-1)*5)<0
+                    zg=-zg;
+                end
+                figure(n)
+                for q=1:4
+                    subplot(4,1,q)
+                    h(q)=plot(data.t-data.t(1),data.a(:,q),'k','linewidth',1);
+                    if q==1
+                        h(9)=plot([data.t(1) data.t(end)]-data.t(1),[mods(ib,n) mods(ib,n)],'k--','linewidth',1);
+                        title([datestr(dayn) ' ' orientation_strings{n} ' Calibration'])
+                    elseif q==4 && isreal(zg)
+                        h(10)=plot([data.t(1) data.t(end)]-data.t(1),[zg zg],'k--','linewidth',1);
+                    end
+                    lim_y=ylim;
+                    h(4+q)=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
+                        flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
+                        [0.8 0.8 0.8]);
+                    h(4+q).EdgeColor='none';
+                    h(4+q).FaceVertexAlphaData=0.2;
+                    h(4+q).FaceAlpha='flat';
+                end
+                fh=gcf;
+                fh.PaperUnits='inches';
+                fh.PaperPosition=[0 0 8.5 11];
+                print(['../calibrations/Axial/weird_cals/multiplots/' datestr(dayn,29) '_' save_strings{n}],'-dtiff','-r300')
+                
+                delete(h)
+            end
         end
-        if sum(dayn==bad_y)
-            n=2;
-            % calculate theoretical z for good cal
-            zg=sqrt(y_m(ib)^2-flipInfoSome.xCal(n+(ib-1)*5)^2-flipInfoSome.yCal(n+(ib-1)*5)^2);
-            
-            figure(n)
-            subplot(411)
-            h1=plot(data.t-data.t(1),data.as,'k','linewidth',1);
-            h1b=plot([data.t(1) data.t(end)]-data.t(1),[y_m(ib) y_m(ib)],'k--','linewidth',1);
-            title([datestr(dayn) ' +Y Calibration'])
-            lim_y=ylim;
-            hp1=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp1.EdgeColor='none';
-            hp1.FaceVertexAlphaData=0.2;
-            hp1.FaceAlpha='flat';
-            
-            subplot(412)
-            h2=plot(data.t-data.t(1),data.a(:,1),'k','linewidth',1);
-            lim_y=ylim;
-            hp2=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp2.EdgeColor='none';
-            hp2.FaceVertexAlphaData=0.2;
-            hp2.FaceAlpha='flat';
-            
-            subplot(413)
-            h3=plot(data.t-data.t(1),data.a(:,2),'k','linewidth',1);
-            lim_y=ylim;
-            hp3=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp3.EdgeColor='none';
-            hp3.FaceVertexAlphaData=0.2;
-            hp3.FaceAlpha='flat';
-            
-            subplot(414)
-            h4=plot(data.t-data.t(1),data.a(:,3),'k','linewidth',1);
-            h4b=plot([data.t(1) data.t(end)]-data.t(1),[zg zg],'k--','linewidth',1);
-            lim_y=ylim;
-            hp4=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp4.EdgeColor='none';
-            hp4.FaceVertexAlphaData=0.2;
-            hp4.FaceAlpha='flat';
-            
-            fh=gcf;
-            fh.PaperUnits='inches';
-            fh.PaperPosition=[0 0 8.5 11];
-            print(['../calibrations/Axial/weird_cals/multiplots/' datestr(dayn,29) '_' save_strings{n}],'-dtiff','-r300')
-            
-            delete([h1 h1b h2 h3 h4 h4b hp1 hp2 hp3 hp4])
-        end
-        if sum(dayn==bad_negy)
-            n=3;
-            % calculate theoretical z for good cal
-            zg=sqrt(negy_m(ib)^2-flipInfoSome.xCal(n+(ib-1)*5)^2-flipInfoSome.yCal(n+(ib-1)*5)^2);
-            
-            figure(n)
-            subplot(411)
-            h1=plot(data.t-data.t(1),data.as,'k','linewidth',1);
-            h1b=plot([data.t(1) data.t(end)]-data.t(1),[negy_m(ib) negy_m(ib)],'k--','linewidth',1);
-            title([datestr(dayn) ' -Y Calibration'])
-            lim_y=ylim;
-            hp1=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp1.EdgeColor='none';
-            hp1.FaceVertexAlphaData=0.2;
-            hp1.FaceAlpha='flat';
-            
-            subplot(412)
-            h2=plot(data.t-data.t(1),data.a(:,1),'k','linewidth',1);
-            lim_y=ylim;
-            hp2=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp2.EdgeColor='none';
-            hp2.FaceVertexAlphaData=0.2;
-            hp2.FaceAlpha='flat';
-            
-            subplot(413)
-            h3=plot(data.t-data.t(1),data.a(:,2),'k','linewidth',1);
-            lim_y=ylim;
-            hp3=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp3.EdgeColor='none';
-            hp3.FaceVertexAlphaData=0.2;
-            hp3.FaceAlpha='flat';
-            
-            subplot(414)
-            h4=plot(data.t-data.t(1),data.a(:,3),'k','linewidth',1);
-            h4b=plot([data.t(1) data.t(end)]-data.t(1),[zg zg],'k--','linewidth',1);
-            lim_y=ylim;
-            hp4=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp4.EdgeColor='none';
-            hp4.FaceVertexAlphaData=0.2;
-            hp4.FaceAlpha='flat';
-            
-            fh=gcf;
-            fh.PaperUnits='inches';
-            fh.PaperPosition=[0 0 8.5 11];
-            print(['../calibrations/Axial/weird_cals/multiplots/' datestr(dayn,29) '_' save_strings{n}],'-dtiff','-r300')
-            
-            delete([h1 h1b h2 h3 h4 h4b hp1 hp2 hp3 hp4])
-        end
-        if sum(dayn==bad_x2)
-            n=4;
-            % calculate theoretical z for good cal
-            zg=sqrt(x2_m(ib)^2-flipInfoSome.xCal(n+(ib-1)*5)^2-flipInfoSome.yCal(n+(ib-1)*5)^2);
-            
-            figure(n)
-            subplot(411)
-            h1=plot(data.t-data.t(1),data.as,'k','linewidth',1);
-            h1b=plot([data.t(1) data.t(end)]-data.t(1),[x2_m(ib) x2_m(ib)],'k--','linewidth',1);
-            title([datestr(dayn) ' +X2 Calibration'])
-            lim_y=ylim;
-            hp1=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp1.EdgeColor='none';
-            hp1.FaceVertexAlphaData=0.2;
-            hp1.FaceAlpha='flat';
-            
-            subplot(412)
-            h2=plot(data.t-data.t(1),data.a(:,1),'k','linewidth',1);
-            lim_y=ylim;
-            hp2=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp2.EdgeColor='none';
-            hp2.FaceVertexAlphaData=0.2;
-            hp2.FaceAlpha='flat';
-            
-            subplot(413)
-            h3=plot(data.t-data.t(1),data.a(:,2),'k','linewidth',1);
-            lim_y=ylim;
-            hp3=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp3.EdgeColor='none';
-            hp3.FaceVertexAlphaData=0.2;
-            hp3.FaceAlpha='flat';
-            
-            subplot(414)
-            h4=plot(data.t-data.t(1),data.a(:,3),'k','linewidth',1);
-            h4b=plot([data.t(1) data.t(end)]-data.t(1),[zg zg],'k--','linewidth',1);
-            lim_y=ylim;
-            hp4=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp4.EdgeColor='none';
-            hp4.FaceVertexAlphaData=0.2;
-            hp4.FaceAlpha='flat';
-            
-            fh=gcf;
-            fh.PaperUnits='inches';
-            fh.PaperPosition=[0 0 8.5 11];
-            print(['../calibrations/Axial/weird_cals/multiplots/' datestr(dayn,29) '_' save_strings{n}],'-dtiff','-r300')
-            
-            delete([h1 h1b h2 h3 h4 h4b hp1 hp2 hp3 hp4])
-        end
-        if sum(dayn==bad_negx)
-            n=5;
-            % calculate theoretical z for good cal
-            zg=sqrt(negx_m(ib)^2-flipInfoSome.xCal(n+(ib-1)*5)^2-flipInfoSome.yCal(n+(ib-1)*5)^2);
-            
-            figure(n)
-            subplot(411)
-            h1=plot(data.t-data.t(1),data.as,'k','linewidth',1);
-            h1b=plot([data.t(1) data.t(end)]-data.t(1),[negx_m(ib) negx_m(ib)],'k--','linewidth',1);
-            title([datestr(dayn) ' -X Calibration'])
-            lim_y=ylim;
-            hp1=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp1.EdgeColor='none';
-            hp1.FaceVertexAlphaData=0.2;
-            hp1.FaceAlpha='flat';
-            
-            subplot(412)
-            h2=plot(data.t-data.t(1),data.a(:,1),'k','linewidth',1);
-            lim_y=ylim;
-            hp2=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp2.EdgeColor='none';
-            hp2.FaceVertexAlphaData=0.2;
-            hp2.FaceAlpha='flat';
-            
-            subplot(413)
-            h3=plot(data.t-data.t(1),data.a(:,2),'k','linewidth',1);
-            lim_y=ylim;
-            hp3=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp3.EdgeColor='none';
-            hp3.FaceVertexAlphaData=0.2;
-            hp3.FaceAlpha='flat';
-            
-            subplot(414)
-            h4=plot(data.t-data.t(1),data.a(:,3),'k','linewidth',1);
-            h4b=plot([data.t(1) data.t(end)]-data.t(1),[zg zg],'k--','linewidth',1);
-            lim_y=ylim;
-            hp4=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
-                flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
-                [0.8 0.8 0.8]);
-            hp4.EdgeColor='none';
-            hp4.FaceVertexAlphaData=0.2;
-            hp4.FaceAlpha='flat';
-            
-            fh=gcf;
-            fh.PaperUnits='inches';
-            fh.PaperPosition=[0 0 8.5 11];
-            print(['../calibrations/Axial/weird_cals/multiplots/' datestr(dayn,29) '_' save_strings{n}],'-dtiff','-r300')
-            
-            delete([h1 h1b h2 h3 h4 h4b hp1 hp2 hp3 hp4])
-        end
-        
     end
 end
