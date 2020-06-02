@@ -102,6 +102,7 @@ for iset = 1:length(flipInfoOut)
       flipInfoOut(iset).xCalTCor(i) = xCalTCor;
       flipInfoOut(iset).yCalTCor(i) = yCalTCor;
       flipInfoOut(iset).zCalTCor(i) = zCalTCor;
+      flipInfoOut(iset).gCalTCor(i) = gCalTCor;
       flipInfoOut(iset).gFrac(i) = gFrac;
       flipInfoOut(iset).T(i) = mean(Tg);
       flipInfoOut(iset).Tstd(i) = std(Tg);

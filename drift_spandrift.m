@@ -69,9 +69,11 @@ if Axial
     figure(50)
     clf
     hold on
-    plot(flipInfoSome.t(1:5:end),flipInfoSome.gCalTCor(1:5:end)-mean(x1_m),'+k','markersize',18);
-    plot(flipInfoSome.t(5:5:end),flipInfoSome.gCalTCor(5:5:end)-mean(negx_m),'xk','markersize',18);
-    plot(flipInfoSome.t(ixs1),(flipInfoSome.gCalTCor(ixs1)+flipInfoSome.gCalTCor(ixs1+4))/2 ...
+    plot(flipInfoSome.t(1:5:end),flipInfoSome.gCalTCor(1:5:end)-mean(x1_m),'+r','markersize',18,'linewidth',2);
+    h1=plot(flipInfoSome.t(ix1),flipInfoSome.gCalTCor(ix1)-mean(x1_m),'+k','markersize',18,'linewidth',2);
+    plot(flipInfoSome.t(5:5:end),flipInfoSome.gCalTCor(5:5:end)-mean(negx_m),'xr','markersize',18,'linewidth',2);
+    h2=plot(flipInfoSome.t(inegx),flipInfoSome.gCalTCor(inegx)-mean(negx_m),'xk','markersize',18,'linewidth',2);
+    h3=plot(flipInfoSome.t(ixs1),(flipInfoSome.gCalTCor(ixs1)+flipInfoSome.gCalTCor(ixs1+4))/2 ...
         -mean(xs1_m),'^k','markerfacecolor','k','markersize',18);
     plot(flipInfoSome.t(1:5:end),x1_m-mean(x1_m),'--k')
     plot(flipInfoSome.t(5:5:end),negx_m-mean(negx_m),'--k')
@@ -79,7 +81,7 @@ if Axial
     text(flipInfoSome.t(end)-40,x1_m(end)-mean(x1_m)+10^-5,[num2str(round(x1drift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,negx_m(end)-mean(negx_m)-10^-5,[num2str(round(negxdrift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,xs1_m(end)-mean(xs1_m)+10^-5,[num2str(round(xspandrift1*10^5,2)) ' \mug/yr'],'fontsize',14)
-    legend('+X calibration','-X calibration','X span','location','northwest')
+    legend([h1,h2,h3],'+X calibration','-X calibration','X span','location','northwest')
     datetick
     title({'Axial SCTA X Calibrations',[datestr(flipInfoSome.t(1),'mmm dd, yyyy') ...
         ' - ' datestr(flipInfoSome.t(end),'mmm dd, yyyy')]})
@@ -98,9 +100,11 @@ if Axial
     figure(51)
     clf
     hold on
-    plot(flipInfoSome.t(4:5:end),flipInfoSome.gCalTCor(4:5:end)-mean(x2_m),'+k','markersize',18);
-    plot(flipInfoSome.t(5:5:end),flipInfoSome.gCalTCor(5:5:end)-mean(negx_m),'xk','markersize',18);
-    plot(flipInfoSome.t(ixs2),(flipInfoSome.gCalTCor(ixs2)+flipInfoSome.gCalTCor(ixs2+1))/2 ...
+    plot(flipInfoSome.t(4:5:end),flipInfoSome.gCalTCor(4:5:end)-mean(x2_m),'+r','markersize',18,'linewidth',2);
+    h1=plot(flipInfoSome.t(ix2),flipInfoSome.gCalTCor(ix2)-mean(x2_m),'+k','markersize',18,'linewidth',2);
+    plot(flipInfoSome.t(5:5:end),flipInfoSome.gCalTCor(5:5:end)-mean(negx_m),'xr','markersize',18,'linewidth',2);
+    h2=plot(flipInfoSome.t(inegx),flipInfoSome.gCalTCor(inegx)-mean(negx_m),'xk','markersize',18,'linewidth',2);
+    h3=plot(flipInfoSome.t(ixs2),(flipInfoSome.gCalTCor(ixs2)+flipInfoSome.gCalTCor(ixs2+1))/2 ...
         -mean(xs2_m),'^k','markerfacecolor','k','markersize',18);
     plot(flipInfoSome.t(4:5:end),x2_m-mean(x2_m),'--k')
     plot(flipInfoSome.t(5:5:end),negx_m-mean(negx_m),'--k')
@@ -108,7 +112,7 @@ if Axial
     text(flipInfoSome.t(end)-40,x2_m(end)-mean(x2_m)+10^-5,[num2str(round(x2drift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,negx_m(end)-mean(negx_m)-10^-5,[num2str(round(negxdrift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,xs2_m(end)-mean(xs2_m)+10^-5,[num2str(round(xspandrift2*10^5,2)) ' \mug/yr'],'fontsize',14)
-    legend('+X calibration','-X calibration','X span','location','northwest')
+    legend([h1,h2,h3],'+X calibration','-X calibration','X span','location','northwest')
     datetick
     title({'Axial SCTA X Calibrations',[datestr(flipInfoSome.t(1),'mmm dd, yyyy') ...
         ' - ' datestr(flipInfoSome.t(end),'mmm dd, yyyy')]})
@@ -127,9 +131,11 @@ if Axial
     figure(52)
     clf
     hold on
-    plot(flipInfoSome.t(2:5:end),flipInfoSome.gCalTCor(2:5:end)-mean(y_m),'+k','markersize',18);
-    plot(flipInfoSome.t(3:5:end),flipInfoSome.gCalTCor(3:5:end)-mean(negy_m),'xk','markersize',18);
-    plot(flipInfoSome.t(iys),(flipInfoSome.gCalTCor(iys)+flipInfoSome.gCalTCor(iys+1))/2 ...
+    plot(flipInfoSome.t(2:5:end),flipInfoSome.gCalTCor(2:5:end)-mean(y_m),'+r','markersize',18,'linewidth',2);
+    h1=plot(flipInfoSome.t(iy),flipInfoSome.gCalTCor(iy)-mean(y_m),'+k','markersize',18,'linewidth',2);
+    plot(flipInfoSome.t(3:5:end),flipInfoSome.gCalTCor(3:5:end)-mean(negy_m),'xr','markersize',18,'linewidth',2);
+    h2=plot(flipInfoSome.t(inegy),flipInfoSome.gCalTCor(inegy)-mean(negy_m),'xk','markersize',18,'linewidth',2);
+    h3=plot(flipInfoSome.t(iys),(flipInfoSome.gCalTCor(iys)+flipInfoSome.gCalTCor(iys+1))/2 ...
         -mean(ys_m),'^k','markerfacecolor','k','markersize',18);
     plot(flipInfoSome.t(2:5:end),y_m-mean(y_m),'--k')
     plot(flipInfoSome.t(3:5:end),negy_m-mean(negy_m),'--k')
@@ -137,7 +143,7 @@ if Axial
     text(flipInfoSome.t(end)-40,y_m(end)-mean(y_m)+10^-5,[num2str(round(ydrift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,negy_m(end)-mean(negy_m)-10^-5,[num2str(round(negydrift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,ys_m(end)-mean(ys_m)+10^-5,[num2str(round(yspandrift*10^5,2)) ' \mug/yr'],'fontsize',14)
-    legend('+Y calibration','-Y calibration','Y span','location','northwest')
+    legend([h1,h2,h3],'+Y calibration','-Y calibration','Y span','location','northwest')
     datetick
     title({'Axial SCTA Y Calibrations',[datestr(flipInfoSome.t(1),'mmm dd, yyyy') ...
         ' - ' datestr(flipInfoSome.t(end),'mmm dd, yyyy')]})
