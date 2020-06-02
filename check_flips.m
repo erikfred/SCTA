@@ -212,58 +212,64 @@ else
     % combine models into single matrix
     mods=[x1_m y_m negy_m x2_m negx_m];
     
-    for i=1:length(daylist)
-        dayn=daylist(i);
-        if sum(ubads==dayn) % skip the bad cals for now
-            continue
+    if exist(['../calibrations/Axial/weird_cals/multiplots/goodcals_' save_strings{1} '.fig'],'file')
+        for v=1:5
+            openfig(['../calibrations/Axial/weird_cals/multiplots/goodcals_' save_strings{v} '.fig']);
         end
-        datestr(dayn)
-        data=[];
-        cha={'MNE','MNN','MNZ'};
-        for m=1:length(cha)
-            IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
-            if ~exist(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed'],'file')
-                cha={'BNE','BNN','BNZ'};
+    else
+        for i=1:length(daylist)
+            dayn=daylist(i);
+            if sum(ubads==dayn) % skip the bad cals for now
+                continue
+            end
+            datestr(dayn)
+            data=[];
+            cha={'MNE','MNN','MNZ'};
+            for m=1:length(cha)
+                IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
                 if ~exist(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed'],'file')
-                    IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1);
+                    cha={'BNE','BNN','BNZ'};
+                    if ~exist(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed'],'file')
+                        IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1);
+                    end
                 end
+                temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed']);
+                data.t=cat(1,temp.t);
+                data.a(:,m)=cat(1,temp.d)/10^7;
             end
-            temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed']);
-            data.t=cat(1,temp.t);
-            data.a(:,m)=cat(1,temp.d)/10^7;
+            temp=sqrt(data.a(:,1).^2+data.a(:,2).^2+data.a(:,3).^2);
+            data.a=cat(2,temp,data.a);
+            % probably worthwhile to add in something that trims data to just
+            % the necessary 10 minute window
+            
+            for j=1:5
+                iflips=find(floor(flipInfoSome.t)==dayn);
+                label_strings={'g_t_o_t (m/s^2)','x (m/s^2)','y (m/s^2)','z (m/s^2)'};
+                figure(j)
+                subplot(411)
+                title([orientation_strings{j} ' Calibration'])
+                for k=1:4
+                    subplot(4,1,k)
+                    hold on
+                    plot(data.t-data.t(1),data.a(:,k),'c','linewidth',1);
+                    xlim([flipInfoSome.t(iflips(j))-data.t(1)+15/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
+                    ylabel(label_strings{k})
+                    set(gca,'xtick',[])
+                    box on
+                end
+                datetick('x','keeplimits')
+            end
         end
-        temp=sqrt(data.a(:,1).^2+data.a(:,2).^2+data.a(:,3).^2);
-        data.a=cat(2,temp,data.a);
-        % probably worthwhile to add in something that trims data to just
-        % the necessary 10 minute window
         
-        for j=1:5
-            iflips=find(floor(flipInfoSome.t)==dayn);
-            label_strings={'g_t_o_t (m/s^2)','x (m/s^2)','y (m/s^2)','z (m/s^2)'};
-            figure(j)
-            subplot(411)
-            title([orientation_strings{j} ' Calibration'])
-            for k=1:4
-                subplot(4,1,k)
-                hold on
-                plot(data.t-data.t(1),data.a(:,k),'c','linewidth',1);
-                xlim([flipInfoSome.t(iflips(j))-data.t(1)+15/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
-                ylabel(label_strings{k})
-                set(gca,'xtick',[])
-                box on
-            end
-            datetick('x','keeplimits')
+        for l=1:5
+            figure(l)
+            fh=gcf;
+            fh.PaperUnits='inches';
+            fh.PaperPosition=[0 0 8.5 11];
+            print(['../calibrations/Axial/weird_cals/multiplots/goodcals_' save_strings{l}],'-dtiff','-r300')
+            saveas(gcf,['../calibrations/Axial/weird_cals/multiplots/goodcals_' save_strings{l} '.fig'])
         end
     end
-    
-%     for l=1:5
-%         figure(l)
-%         fh=gcf;
-%         fh.PaperUnits='inches';
-%         fh.PaperPosition=[0 0 8.5 11];
-%         print(['../calibrations/Axial/weird_cals/multiplots/goodcals_' save_strings{l}],'-dtiff','-r300')
-%         saveas(gcf,['../calibrations/Axial/weird_cals/multiplots/goodcals_' save_strings{l} '.fig'])
-%     end
     
     % add in curves from bad calibrations, saving individually
     for k=1:length(ubads)
@@ -300,10 +306,15 @@ else
                     h(q)=plot(data.t-data.t(1),data.a(:,q),'k','linewidth',1);
                     if q==1
                         h(9)=plot([data.t(1) data.t(end)]-data.t(1),[mods(ib,n) mods(ib,n)],'k--','linewidth',1);
-                        title([datestr(dayn) ' ' orientation_strings{n} ' Calibration'])
-                    elseif q==4 && isreal(zg)
-                        h(10)=plot([data.t(1) data.t(end)]-data.t(1),[zg zg],'k--','linewidth',1);
+                        title([datestr(flipInfoSome.t(n)) ' ' orientation_strings{n} ' Calibration'])
+                    elseif q==4
+                        if isreal(zg)
+                            h(10)=plot([data.t(1) data.t(end)]-data.t(1),[zg zg],'k--','linewidth',1);
+                        else
+                            title('Corrected z is imaginary')
+                        end
                     end
+                    ylim auto
                     lim_y=ylim;
                     h(4+q)=patch([flipInfoSome.t(n)+60/60/60/24 flipInfoSome.t(n)+90/60/60/24 flipInfoSome.t(n)+90/60/60/24 ...
                         flipInfoSome.t(n)+60/60/60/24]-floor(flipInfoSome.t(n)),[lim_y(1) lim_y(1) lim_y(2) lim_y(2)],...
@@ -311,6 +322,7 @@ else
                     h(4+q).EdgeColor='none';
                     h(4+q).FaceVertexAlphaData=0.2;
                     h(4+q).FaceAlpha='flat';
+                    ylim([lim_y(1) lim_y(2)])
                 end
                 fh=gcf;
                 fh.PaperUnits='inches';
