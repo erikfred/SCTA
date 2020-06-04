@@ -275,6 +275,7 @@ else
     for k=1:length(ubads)
         dayn=ubads(k);
         data=[];
+        []=find(dayn==floor(flipInfoSome.t
         cha={'MNE','MNN','MNZ'};
         for m=1:length(cha)
             IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
@@ -306,7 +307,7 @@ else
                     h(q)=plot(data.t-data.t(1),data.a(:,q),'k','linewidth',1);
                     if q==1
                         h(9)=plot([data.t(1) data.t(end)]-data.t(1),[mods(ib,n) mods(ib,n)],'k--','linewidth',1);
-                        title([datestr(flipInfoSome.t(n+(ib-1)*5)) ' ' orientation_strings{n} ' Calibration'])
+                        title([datestr(flipInfoSome.t(n)) ' ' orientation_strings{n} ' Calibration'])
                     elseif q==4
                         if isreal(zg)
                             h(10)=plot([data.t(1) data.t(end)]-data.t(1),[zg zg],'k--','linewidth',1);
