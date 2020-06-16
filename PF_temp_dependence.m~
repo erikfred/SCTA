@@ -129,7 +129,7 @@ plot(t_X1+flipInfoAll.t(61),a_X_star(1:length(t_X1))-mean(a_X1),'*r','markersize
 plot(t_X1+flipInfoAll.t(61),a_X1-a_X_star(1:length(t_X1)),'xk','markersize',20)
 text(flipInfoAll.t(end-10),-2.25e-4,['drift = ' num2str(round(m_X(1)*365*10^5,1)) ' ug/y'],'fontsize',15)
 text(flipInfoAll.t(end-10),-3.25e-4,['Tdep = ' num2str(round(m_X(5)*10^5,1)) ' ug/C'],'fontsize',15)
-if dT_dep
+if Tdep
     text(flipInfoAll.t(end-10),-4.25e-4,['dTdep = ' num2str(round(m_X(6)*10^5,1)) ' ug/d/C'],'fontsize',15)
 end
 set(gca,'fontsize',15)
@@ -148,7 +148,7 @@ box on
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
-if dT_dep
+if Tdep
     print('../calibrations/PinonFlat/T_dependence/X1_dT','-dtiff','-r300')
     saveas(gcf,'../calibrations/PinonFlat/T_dependence/X1_dT.fig')
 else
@@ -164,7 +164,7 @@ plot([t_X2a;t_X2b]+flipInfoAll.t(61),a_X_star(length(t_X1)+1:length([t_X1;t_X2a;
 plot([t_X2a;t_X2b]+flipInfoAll.t(61),[a_X2a;a_X2b]-a_X_star(length(t_X1)+1:length([t_X1;t_X2a;t_X2b])),'xk','markersize',20)
 text(flipInfoAll.t(end-10),-2.25e-4,['drift = ' num2str(round(m_X(2)*365*10^5,1)) ', ' num2str(round(m_X(3)*365*10^5,1)) ' ug/y'],'fontsize',15)
 text(flipInfoAll.t(end-10),-3.25e-4,['Tdep = ' num2str(round(m_X(5)*10^5,1)) ' ug/C'],'fontsize',15)
-if dT_dep
+if Tdep
     text(flipInfoAll.t(end-10),-4.25e-4,['dTdep = ' num2str(round(m_X(6)*10^5,1)) ' ug/d/C'],'fontsize',15)
 end
 set(gca,'fontsize',15)
@@ -183,7 +183,7 @@ box on
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
-if dT_dep
+if Tdep
     print('../calibrations/PinonFlat/T_dependence/X2_dT','-dtiff','-r300')
     saveas(gcf,'../calibrations/PinonFlat/T_dependence/X2_dT.fig')
 else
@@ -195,11 +195,11 @@ end
 figure
 hold on
 plot(t_negX+flipInfoAll.t(61),a_negX-mean(a_negX),'or','markersize',20)
-plot(t_negX+flipInfoAll.t(61),a_X_star(length([t_X1;t_X2a;t_X2b])+1:end)-mean(a_negX),'*r','markersize',20)
+plot(t_negX+flipInfoAll.t(61),a_X_star(length(t_X1)+1:end)-mean(a_negX),'*r','markersize',20)
 plot(t_negX+flipInfoAll.t(61),a_negX-a_X_star(length([t_X1;t_X2a;t_X2b])+1:end),'xk','markersize',20)
 text(flipInfoAll.t(end-10),-2.25e-4,['drift = ' num2str(round(m_X(4)*365*10^5,1)) ' ug/y'],'fontsize',15)
 text(flipInfoAll.t(end-10),-3.25e-4,['Tdep = ' num2str(round(m_X(5)*10^5,1)) ' ug/C'],'fontsize',15)
-if dT_dep
+if Tdep
     text(flipInfoAll.t(end-10),-4.25e-4,['dTdep = ' num2str(round(m_X(6)*10^5,1)) ' ug/d/C'],'fontsize',15)
 end
 set(gca,'fontsize',15)
@@ -218,16 +218,15 @@ box on
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
-if dT_dep
-    print('../calibrations/PinonFlat/T_dependence/negX_dT','-dtiff','-r300')
-    saveas(gcf,'../calibrations/PinonFlat/T_dependence/negX_dT.fig')
+if Tdep
+    print('../calibrations/PinonFlat/T_dependence/neg_dT','-dtiff','-r300')
+    saveas(gcf,'../calibrations/PinonFlat/T_dependence/X2_dT.fig')
 else
-    print('../calibrations/PinonFlat/T_dependence/negX','-dtiff','-r300')
-    saveas(gcf,'../calibrations/PinonFlat/T_dependence/negX.fig')
+    print('../calibrations/PinonFlat/T_dependence/X2','-dtiff','-r300')
+    saveas(gcf,'../calibrations/PinonFlat/T_dependence/X2.fig')
 end
-% save('../calibrations/PinonFlat/T_dependence/X1','a_X1','t_X1','T_X1','G_X','m_X','a_X_star','a_negX','t_negX','T_negX')
+save('../calibrations/PinonFlat/T_dependence/X1','a_X1','t_X1','T_X1','G_X','m_X','a_X_star','a_negX','t_negX','T_negX')
 
-%% PICK UP AND RESUME HERE -- Y ORIENTATIONS
 % +X1, +X2, and -X
 a_X1=flipInfoAll.gCal([34:3:58,61:5:end]);
 t_X1=flipInfoAll.t([34:3:58,61:5:end])-flipInfoAll.t(61);

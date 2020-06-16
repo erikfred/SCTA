@@ -244,7 +244,7 @@ else
             
             for j=1:5
                 iflips=find(floor(flipInfoSome.t)==dayn);
-                label_strings={'g_t_o_t (m/s^2)','x (m/s^2)','y (m/s^2)','z (m/s^2)'};
+                label_strings={'Total Accel (m/s^2)','x (m/s^2)','y (m/s^2)','z (m/s^2)'};
                 figure(j)
                 subplot(411)
                 title([orientation_strings{j} ' Calibration'])
@@ -310,6 +310,7 @@ else
                     elseif q==4
                         if isreal(zg)
                             h(10)=plot([data.t(1) data.t(end)]-data.t(1),[zg zg],'k--','linewidth',1);
+                            title('')
                         else
                             title('Corrected z is imaginary')
                         end
@@ -323,6 +324,7 @@ else
                     h(4+q).FaceVertexAlphaData=0.2;
                     h(4+q).FaceAlpha='flat';
                     ylim([lim_y(1) lim_y(2)])
+                    set(gca,'fontsize',14)
                 end
                 fh=gcf;
                 fh.PaperUnits='inches';
