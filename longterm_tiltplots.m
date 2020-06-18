@@ -1,7 +1,5 @@
 % longterm_tiltplots.m
 %
-% ***WORK IN PROGRESS***
-%
 % An improvement on 'monthly_tiltplots.m', discarding the separation of
 % data into monthly units and providing data structures at different
 % temporal resolution. 
