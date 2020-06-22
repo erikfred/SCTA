@@ -3,9 +3,14 @@
 % Sets up and solves inversion to get T and dT/dt dependence and drift from
 % Pinon Flat calibration data. Constrains dependencies to be the same for 
 % +X1, +X2, and -X, and same for +Y and -Y. Includes option for including 
-% or excluding dT/dt dependence. Will eventually include option for weighting
-% data by interval between calibrations, to mitigate influence of period of
-% weekly calibrations.
+% or excluding dT/dt dependence.
+%
+% FUTURE ADDITIONS:
+% - Option for weighting data by interval between calibrations, to mitigate
+% influence of calibration interval
+% - Drift may change after instrument disturbance (e.g. power loss), so may
+% build in option to make linear component independent between these
+% events
 %
 
 clear; close all
@@ -76,14 +81,18 @@ if dT_dep
     [~,inegx,~]=intersect(ceil(td_negX),ceil(t_negX));
     a_X_star=[a_X_star;ad_X_star(length(td_X1)+length(td_X2a)+length(td_X2b)+inegx)];
 else
-    % inversion of original data only (NEEDS X2 FIELDS ADDED)
-    G_X=[[t_X1;zeros(size(t_negX))],...
-        [zeros(size(t_X1));t_negX],...
-        [T_X1;T_negX],...
-        [ones(size(T_X1));zeros(size(T_negX))],...
-        [zeros(size(T_X1));ones(size(T_negX))]];
+    % inversion of original data only
+    G_X=[[t_X1;zeros(size(t_X2a));zeros(size(t_X2b));zeros(size(t_negX))],...
+        [zeros(size(t_X1));t_X2a;zeros(size(t_X2b));zeros(size(t_negX))],...
+        [zeros(size(t_X1));zeros(size(t_X2a));t_X2b;zeros(size(t_negX))],...
+        [zeros(size(t_X1));zeros(size(t_X2a));zeros(size(t_X2b));t_negX],...
+        [T_X1;T_X2a;T_X2b;T_negX],...
+        [ones(size(T_X1));zeros(size(t_X2a));zeros(size(t_X2b));zeros(size(T_negX))],...
+        [zeros(size(T_X1));ones(size(t_X2a));zeros(size(t_X2b));zeros(size(T_negX))],...
+        [zeros(size(T_X1));zeros(size(t_X2a));ones(size(t_X2b));zeros(size(T_negX))],...
+        [zeros(size(T_X1));zeros(size(t_X2a));zeros(size(t_X2b));ones(size(T_negX))]];
     
-    m_X=(G_X'*G_X)\G_X'*[a_X1;a_negX];
+    m_X=(G_X'*G_X)\G_X'*[a_X1;a_X2a;a_X2b;a_negX];
     a_X_star=G_X*m_X;
 end
 
@@ -227,57 +236,73 @@ else
 end
 % save('../calibrations/PinonFlat/T_dependence/X1','a_X1','t_X1','T_X1','G_X','m_X','a_X_star','a_negX','t_negX','T_negX')
 
-%% PICK UP AND RESUME HERE -- Y ORIENTATIONS
-% +X1, +X2, and -X
-a_X1=flipInfoAll.gCal([34:3:58,61:5:end]);
-t_X1=flipInfoAll.t([34:3:58,61:5:end])-flipInfoAll.t(61);
-T_X1=flipInfoAll.T([34:3:58,61:5:end]);
-% dT_X1=diff(T_X1); dT_X1=[dT_X1(1);dT_X1];
-a_X2a=flipInfoAll.gCal(36:3:60); % need to split up +X2 to before and after
-t_X2a=flipInfoAll.t(36:3:60)-flipInfoAll.t(61); % 5-flip scheme
-T_X2a=flipInfoAll.T(36:3:60);
-% dT_X2a=diff(T_X2a); dT_X2a=[dT_X2a(1);dT_X2a];
-a_X2b=flipInfoAll.gCal(64:5:end);
-t_X2b=flipInfoAll.t(64:5:end)-flipInfoAll.t(61);
-T_X2b=flipInfoAll.T(64:5:end);
-% dT_X2b=diff(T_X2b); dT_X2b=[dT_X2b(1);dT_X2b];
-a_negX=-flipInfoAll.gCal(65:5:end);
-t_negX=flipInfoAll.t(65:5:end)-flipInfoAll.t(61);
-T_negX=flipInfoAll.T(65:5:end);
-% dT_negX=diff(T_negX); dT_negX=[dT_negX(1);dT_negX];
-
-% interpolate to daily values
-td_X1=[t_X1(1):t_X1(end)+0.1]';
-ad_X1=interp1(t_X1,a_X1,td_X1,'pchip');
-Td_X1=interp1(t_X1,T_X1,td_X1,'pchip');
-dTd_X1=diff(Td_X1); dTd_X1=[dTd_X1(1);dTd_X1];
-td_X2a=[t_X2a(1):t_X2a(end)+0.1]';
-ad_X2a=interp1(t_X2a,a_X2a,td_X2a,'pchip');
-Td_X2a=interp1(t_X2a,T_X2a,td_X2a,'pchip');
-dTd_X2a=diff(Td_X2a); dTd_X2a=[dTd_X2a(1);dTd_X2a];
-td_X2b=[t_X2b(1):t_X2b(end)+0.1]';
-ad_X2b=interp1(t_X2b,a_X2b,td_X2b,'pchip');
-Td_X2b=interp1(t_X2b,T_X2b,td_X2b,'pchip');
-dTd_X2b=diff(Td_X2b); dTd_X2b=[dTd_X2b(1);dTd_X2b];
-td_negX=[t_negX(1):t_negX(end)+0.1]';
-ad_negX=interp1(t_negX,a_negX,td_negX,'pchip');
-Td_negX=interp1(t_negX,T_negX,td_negX,'pchip');
-dTd_negX=diff(Td_negX); dTd_negX=[dTd_negX(1);dTd_negX];
-
 % +Y and -Y
 a_Y=flipInfoAll.gCal([35:3:59,62:5:end]);
 t_Y=flipInfoAll.t([35:3:59,62:5:end])-flipInfoAll.t(61);
 T_Y=flipInfoAll.T([35:3:59,62:5:end]);
+% dT_Y=diff(T_Y); dT_Y=[dT_Y(1);dT_Y];
 a_negY=-flipInfoAll.gCal(63:5:end);
 t_negY=flipInfoAll.t(63:5:end)-flipInfoAll.t(61);
 T_negY=flipInfoAll.T(63:5:end);
+% dT_negY=diff(T_negY); dT_negY=[dT_negY(1);dT_negY];
 
-G_Y=[[t_Y;zeros(size(t_negY))],[zeros(size(t_Y));t_negY],[T_Y;T_negY],...
-    [ones(size(T_Y));zeros(size(T_negY))],[zeros(size(T_Y));ones(size(T_negY))]];
+if dT_dep
+    % interpolate to daily values
+    td_Y=[t_Y(1):t_Y(end)+0.1]';
+    ad_Y=interp1(t_Y,a_Y,td_Y,'pchip');
+    Td_Y=interp1(t_Y,T_Y,td_Y,'pchip');
+    dTd_Y=diff(Td_Y); dTd_Y=[dTd_Y(1);dTd_Y];
+    td_negY=[t_negY(1):t_negY(end)+0.1]';
+    ad_negY=interp1(t_negY,a_negY,td_negY,'pchip');
+    Td_negY=interp1(t_negY,T_negY,td_negY,'pchip');
+    dTd_negY=diff(Td_negY); dTd_negY=[dTd_negY(1);dTd_negY];
+    
+    % inversion of interpolated data
+    Gd_Y=[[td_Y;zeros(size(td_negY))],...
+        [zeros(size(td_Y));td_negY],...
+        [Td_Y;Td_negY],...
+        [dTd_Y;dTd_negY],...
+        [ones(size(Td_Y));zeros(size(Td_negY))],...
+        [zeros(size(Td_Y));ones(size(Td_negY))]];
+    
+    m_Y=(Gd_Y'*Gd_Y)\Gd_Y'*[ad_Y;ad_negY];
+    ad_Y_star=Gd_Y*m_Y;
+    
+    % resample to original times
+    [~,iy,~]=intersect(round(td_Y),round(t_Y));
+    a_Y_star=ad_Y_star(iy);
+    [~,inegy,~]=intersect(ceil(td_negY),ceil(t_negY));
+    a_Y_star=[a_Y_star;ad_Y_star(length(td_Y)+inegy)];
+else
+    % inversion of original data only
+    G_Y=[[t_Y;zeros(size(t_negY))],...
+        [zeros(size(t_Y));t_negY],...
+        [T_Y;T_negY],...
+        [ones(size(T_Y));zeros(size(T_negY))],...
+        [zeros(size(T_Y));ones(size(T_negY))]];
+    
+    m_Y=(G_Y'*G_Y)\G_Y'*[a_Y;a_negY];
+    a_Y_star=G_Y*m_Y;
+end
 
-m_Y=(G_Y'*G_Y)\G_Y'*[a_Y;a_negY];
-a_Y_star=G_Y*m_Y;
+% % PLOTS TO VERIFY EVERYTHING LOOKS OK
+% figure
+% plot(td_Y,ad_Y,'o')
+% hold on
+% plot(td_Y,ad_Y_star(1:length(td_Y)),'x')
+% yyaxis right
+% plot(td_Y,Td_Y) %temperature
+% % plot(td_Y,ad_Y-ad_X_star(1:length(td_Y)),'x') %residual
+% 
+% figure
+% plot(td_negY,ad_negY,'o')
+% hold on
+% plot(td_negY,ad_Y_star(length(td_Y)+1:length(td_Y)+length(td_negY)),'x')
+% yyaxis right
+% plot(td_negY,Td_negY)
+% % plot(td_negY,ad_negY-ad_Y_star(length(td_Y)+1:length(td_Y)+length(td_negY)),'x')
 
+% PLOTTING
 figure
 hold on
 plot(t_Y+flipInfoAll.t(61),a_Y-mean(a_Y),'or','markersize',20)
@@ -301,8 +326,13 @@ box on
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
-print('../calibrations/PinonFlat/T_dependence/Y','-dtiff','-r300')
-saveas(gcf,'../calibrations/PinonFlat/T_dependence/Y.fig')
+if dT_dep
+    print('../calibrations/PinonFlat/T_dependence/Y_dT','-dtiff','-r300')
+    saveas(gcf,'../calibrations/PinonFlat/T_dependence/Y_dT.fig')
+else
+    print('../calibrations/PinonFlat/T_dependence/Y','-dtiff','-r300')
+    saveas(gcf,'../calibrations/PinonFlat/T_dependence/Y.fig')
+end
 
 figure
 hold on
@@ -327,6 +357,11 @@ box on
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
-print('../calibrations/PinonFlat/T_dependence/negY','-dtiff','-r300')
-saveas(gcf,'../calibrations/PinonFlat/T_dependence/negY.fig')
-save('../calibrations/PinonFlat/T_dependence/Y','a_Y','t_Y','T_Y','G_Y','m_Y','a_Y_star','a_negY','t_negY','T_negY')
+if dT_dep
+    print('../calibrations/PinonFlat/T_dependence/negY_dT','-dtiff','-r300')
+    saveas(gcf,'../calibrations/PinonFlat/T_dependence/negY_dT.fig')
+else
+    print('../calibrations/PinonFlat/T_dependence/negY','-dtiff','-r300')
+    saveas(gcf,'../calibrations/PinonFlat/T_dependence/negY.fig')
+end
+% save('../calibrations/PinonFlat/T_dependence/Y','a_Y','t_Y','T_Y','G_Y','m_Y','a_Y_star','a_negY','t_negY','T_negY')
