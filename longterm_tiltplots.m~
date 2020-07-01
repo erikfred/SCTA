@@ -5,7 +5,7 @@
 % temporal resolution. 
 %
 
-% clear; close all;
+clear; close all;
 
 %%%%%%%%%%CONFIG%%%%%%%%%%
 axial=false;
@@ -179,7 +179,6 @@ if pf
     while t1<tf
         data=get_sctaDay('/Volumes/GoogleDrive/My Drive/Oceanography/SCTA-Share/OOI-PF/SCTA-PF/ParsedData',t1);
         if isempty(data.t)
-            t1=t1+1;
             continue
         end
         
@@ -238,7 +237,7 @@ if pf
         end
         
         % hourly version
-        if length(Ttempd)>620 %minimum length for decimation filter
+        if length(ntempd)>620 %minimum length for decimation filter
             %decimate all to a sample/hr
             ytempd=decimate(ytempd,10,'fir'); ytempd=decimate(ytempd,6,'fir');
             xtempd=decimate(xtempd,10,'fir'); xtempd=decimate(xtempd,6,'fir');
@@ -248,10 +247,10 @@ if pf
             %append
             if length(ttempd)==length(xtempd) && length(ttempd)==length(ytempd) ...
                     && length(ttempd)==length(ztempd) && length(ttempd)==length(Ttempd)
-                data_hr.MNN=[data_hr.MNN; ytempd];
-                data_hr.MNE=[data_hr.MNE; xtempd];
-                data_hr.MNZ=[data_hr.MNZ; ztempd];
-                data_hr.MKA=[data_hr.MKA; Ttempd];
+                data_hr.MNN=[data_hr.MNN; ntempd/10^7];
+                data_hr.MNE=[data_hr.MNE; etempd/10^7];
+                data_hr.MNZ=[data_hr.MNZ; ztempd/10^7];
+                data_hr.MKA=[data_hr.MKA; Ttempd/10^7];
                 data_hr.t=[data_hr.t; ttempd];
             else
                 warning('vectors have different lengths')
@@ -259,14 +258,14 @@ if pf
             end
             
             %note calibration signal
-            [checkcal,iflip]=max(abs(median(ytempd)-ytempd));
-            if checkcal>0.01
-                data_hr.iflip=[data_hr.iflip;length(data_hr.t)-length(Ttempd)+(iflip-2:length(Ttempd))'];
+            [checkcal,iflip]=max(abs(median(ntempd)-ntempd));
+            if checkcal/10^7>0.01
+                data_hr.iflip=[data_hr.iflip;length(data_hr.t)-length(ntempd)+(iflip-2:length(ntempd))'];
             end
         end
         t1=t1+1;
     end
     
-    save('../calibrations/PinonFlat/PFdata_hr.mat','data_hr')
-    save('../calibrations/PinonFlat/PFdata_min.mat','data_min')
+    save('../calibrations/Axial/axialdata_hr.mat','data_hr')
+    save('../calibrations/Axial/axialdata_min.mat','data_min')
 end

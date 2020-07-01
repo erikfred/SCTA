@@ -12,8 +12,12 @@ clear; close all
 load('../compass_directions.mat')
 CCMP=CCMP([4 3 2 1]);
 
-t0=datenum(2019,07,10);
-tf=datenum(2019,07,16);
+t0=datenum(2019,01,15);
+tf=datenum(2019,01,21);
+
+t0_str=datestr(t0,30);
+tf_str=datestr(tf,30);
+svstr=[t0_str(1:8) '-' tf_str(7:8)];
 
 %load data
 sta1={'AXCC2'};
@@ -22,10 +26,10 @@ sta2={'AXCC1','AXEC2','AXID1'};
 cha2={'LAX','LAY'};
 
 t1=t0;
-AXCC1.time=[];AXCC1.LAX=[];AXCC1.LAY=[];
-AXEC2.time=[];AXEC2.LAX=[];AXEC2.LAY=[];
-AXID1.time=[];AXID1.LAX=[];AXID1.LAY=[];
-ASHES.time=[];ASHES.LAX=[];ASHES.LAY=[];
+AXCC1.time=[];AXCC1.LAX=[];AXCC1.LAY=[];AXCC1.BDO=[];
+AXEC2.time=[];AXEC2.LAX=[];AXEC2.LAY=[];AXEC2.BDO=[];
+AXID1.time=[];AXID1.LAX=[];AXID1.LAY=[];AXID1.BDO=[];
+ASHES.time=[];ASHES.LAX=[];ASHES.LAY=[];ASHES.BDO=[];
 AXCC2.time=[];AXCC2.MNE=[];AXCC2.MNN=[];
 %% PULL DATA
 while t1<=tf
@@ -34,11 +38,8 @@ while t1<=tf
     % grab all BOPT data
     for i=1:length(sta2)
         for j=1:length(cha2)
-            IRIS_data_pull(sta2{i},cha2{j},'11',t1,t1+1)
             if ~exist(['../tiltcompare/' sta2{i} '/' sta2{i} '_' cha2{j} '_' datestr(t1,29) '.miniseed'],'file')
-                if ~exist(['../tiltcompare/' sta2{i} '/' sta2{i} '_' cha2{j} '_' datestr(t1,29) '.miniseed'],'file')
-                    IRIS_data_pull(sta2{i},cha2{j},'11',t1,t1+1);
-                end
+                IRIS_data_pull(sta2{i},cha2{j},'11',t1,t1+1);
             end
             temp=rdmseed(['../tiltcompare/' sta2{i} '/' sta2{i} '_' cha2{j} '_' datestr(t1,29) '.miniseed']);
             ttemp=cat(1,temp.t);
@@ -46,22 +47,30 @@ while t1<=tf
             % decimate to 1 sample/min
             dtemp1=decimate(dtemp,6,'fir');
             data.a(:,j)=decimate(dtemp1,10,'fir');
-            data.t=linspace(ttemp(1),ttemp(end),length(data.a))';
+            data.t=linspace(ttemp(1),ttemp(1)+1439/1440,length(data.a))';
         end
+        % add pressure
+        if ~exist(['../tiltcompare/' sta2{i} '/' sta2{i} '_BDO_' datestr(t1,29) '.miniseed'],'file')
+            IRIS_data_pull(sta2{i},'BDO','11',t1,t1+1);
+        end
+        temp=rdmseed(['../tiltcompare/' sta2{i} '/' sta2{i} '_BDO_' datestr(t1,29) '.miniseed']);
+        dtemp=double(cat(1,temp.d));
+        % decimate to 1 sample/min
+        dtemp1=decimate(dtemp,10,'fir');
+        dtemp2=decimate(dtemp1,12,'fir');
+        data.p=decimate(dtemp2,10,'fir');
         % append to appropriate structure
         eval([sta2{i} '.time=[' sta2{i} '.time; data.t];']);
         eval([sta2{i} '.LAX=[' sta2{i} '.LAX; data.a(:,1)];']);
         eval([sta2{i} '.LAY=[' sta2{i} '.LAY; data.a(:,2)];']);
+        eval([sta2{i} '.BDO=[' sta2{i} '.BDO; data.p];']);
         clear data
     end
     
     % grab AXCC2 (SCTA) data
     for k=1:length(cha1)
-        IRIS_data_pull('AXCC2',cha1{k},'--',t1,t1+1)
         if ~exist(['../tiltcompare/AXCC2/AXCC2_' cha1{k} '_' datestr(t1,29) '.miniseed'],'file')
-            if ~exist(['../tiltcompare/AXCC2/AXCC2_' cha1{k} '_' datestr(t1,29) '.miniseed'],'file')
-                IRIS_data_pull('AXCC2',cha1{k},'--',t1,t1+1);
-            end
+            IRIS_data_pull('AXCC2',cha1{k},'--',t1,t1+1);
         end
         temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha1{k} '_' datestr(t1,29) '.miniseed']);
         ttemp=cat(1,temp.t);
@@ -70,7 +79,7 @@ while t1<=tf
         dtemp1=decimate(dtemp,8,'fir');
         dtemp2=decimate(dtemp1,6,'fir');
         data.a(:,k)=decimate(dtemp2,10,'fir');
-        data.t=linspace(ttemp(1),ttemp(end),length(data.a))';
+        data.t=linspace(ttemp(1),ttemp(1)+1439/1440,length(data.a))';
     end
     % append to AXCC2
     AXCC2.time=[AXCC2.time; data.t];
@@ -80,6 +89,9 @@ while t1<=tf
     
     t1=t1+1;
 end
+
+% check to ensure time series have same length
+keyboard
 
 %% PROCESSING
 % BOPT compass correction
@@ -94,7 +106,7 @@ end
 AXCC2.LAX=asin(AXCC2.MNE/9.81)*10^6;
 AXCC2.LAY=asin(AXCC2.MNN/9.81)*10^6;
 
-% 6 sample/day low pass filter
+% 2 sample/day low pass filter
 [b,a]=butter(4,2*(1/60/60/12)/(1/60),'low');
 AXCC2.LAX=filtfilt(b,a,AXCC2.LAX);
 AXCC2.LAY=filtfilt(b,a,AXCC2.LAY);
@@ -105,245 +117,208 @@ AXEC2.LAY=filtfilt(b,a,AXEC2.LAY);
 AXID1.LAX=filtfilt(b,a,AXID1.LAX);
 AXID1.LAY=filtfilt(b,a,AXID1.LAY);
 
-%% PLOTTING
+% 1 sample/day high pass filter
+[b,a]=butter(4,2*(1/60/60/24)/(1/60),'high');
+AXCC2.LAX=filtfilt(b,a,AXCC2.LAX);
+AXCC2.LAY=filtfilt(b,a,AXCC2.LAY);
+AXCC1.LAX=filtfilt(b,a,AXCC1.LAX);
+AXCC1.LAY=filtfilt(b,a,AXCC1.LAY);
+AXEC2.LAX=filtfilt(b,a,AXEC2.LAX);
+AXEC2.LAY=filtfilt(b,a,AXEC2.LAY);
+AXID1.LAX=filtfilt(b,a,AXID1.LAX);
+AXID1.LAY=filtfilt(b,a,AXID1.LAY);
+
+%% TIDAL TILT MODEL
+path(path,genpath('/Users/erikfred/Documents/spotl/EKF_spotl/'))
+
+[AXCCsptl.LAY,AXCCsptl.LAX,AXCCsptl.time,~]=tide_tilt(45.955002,-130.008743,...
+    -t0,-t1,3600,-1529.9,'osu','ocean','datenum');
+AXCCsptl.LAY=AXCCsptl.LAY/10^3; % convert from nrad to urad
+AXCCsptl.LAX=AXCCsptl.LAX/10^3;
+
+[AXECsptl.LAY,AXECsptl.LAX,AXECsptl.time,~]=tide_tilt(45.939671,-129.973801,...
+    -t0,-t1,3600,-1519.0,'osu','ocean','datenum');
+AXECsptl.LAY=AXECsptl.LAY/10^3; % convert from nrad to urad
+AXECsptl.LAX=AXECsptl.LAX/10^3;
+
+[AXIDsptl.LAY,AXIDsptl.LAX,AXIDsptl.time,~]=tide_tilt(45.925732,-129.977997,...
+    -t0,-t1,3600,-1527.5,'osu','ocean','datenum');
+AXIDsptl.LAY=AXIDsptl.LAY/10^3; % convert from nrad to urad
+AXIDsptl.LAX=AXIDsptl.LAX/10^3;
+
+% 2 sample/day low pass filter
+[b,a]=butter(4,2*(1/3600/12)/(1/3600),'low');
+AXCCsptl.LAX=filtfilt(b,a,AXCCsptl.LAX);
+AXCCsptl.LAY=filtfilt(b,a,AXCCsptl.LAY);
+AXECsptl.LAX=filtfilt(b,a,AXECsptl.LAX);
+AXECsptl.LAY=filtfilt(b,a,AXECsptl.LAY);
+AXIDsptl.LAX=filtfilt(b,a,AXIDsptl.LAX);
+AXIDsptl.LAY=filtfilt(b,a,AXIDsptl.LAY);
+
+% 1 sample/day high pass filter
+[b,a]=butter(4,2*(1/3600/24)/(1/3600),'high');
+AXCCsptl.LAX=filtfilt(b,a,AXCCsptl.LAX);
+AXCCsptl.LAY=filtfilt(b,a,AXCCsptl.LAY);
+AXECsptl.LAX=filtfilt(b,a,AXECsptl.LAX);
+AXECsptl.LAY=filtfilt(b,a,AXECsptl.LAY);
+AXIDsptl.LAX=filtfilt(b,a,AXIDsptl.LAX);
+AXIDsptl.LAY=filtfilt(b,a,AXIDsptl.LAY);
+
+%% TIME SERIES PLOTTING
 
 figure
 % Central Caldera
 subplot(421)
-plot(AXCC2.time,detrend(AXCC2.LAX-mean(AXCC2.LAX)),'linewidth',1)
-hold on
 plot(AXCC1.time,detrend(AXCC1.LAX-mean(AXCC1.LAX)),'linewidth',1)
+hold on
+plot(AXCC2.time,-detrend(AXCC2.LAX-mean(AXCC2.LAX)),'linewidth',1)
+plot(AXCCsptl.time,AXCCsptl.LAX*4,'k','linewidth',1)
 datetick('x','keeplimits')
 set(gca,'xticklabel',[])
 ylabel('x-tilt (\murad)')
+title('Central Caldera')
+legend('BOPT','SCTA','SPOTL','location','northeast')
 subplot(423)
 plot(AXCC2.time,detrend(AXCC2.LAY-mean(AXCC2.LAY)),'linewidth',1)
 hold on
-plot(AXCC1.time,detrend(AXCC1.LAY-mean(AXCC1.LAY)),'linewidth',1)
+plot(AXCC1.time,-detrend(AXCC1.LAY-mean(AXCC1.LAY)),'linewidth',1)
+plot(AXCCsptl.time,AXCCsptl.LAY*4,'k','linewidth',1)
 datetick('x','keeplimits')
 ylabel('y-tilt (\murad)')
+legend('BOPT','SCTA','SPOTL','location','northeast')
+
 % Eastern Caldera
 subplot(422)
 plot(AXEC2.time,detrend(AXEC2.LAX-mean(AXEC2.LAX)),'linewidth',1)
+hold on
+plot(AXECsptl.time,AXECsptl.LAX*4,'k','linewidth',1)
 datetick('x','keeplimits')
 set(gca,'xticklabel',[])
+ylabel('x-tilt (\murad)')
+title('Eastern Caldera')
+legend('BOPT','SPOTL','location','northeast')
 subplot(424)
 plot(AXEC2.time,detrend(AXEC2.LAY-mean(AXEC2.LAY)),'linewidth',1)
+hold on
+plot(AXECsptl.time,AXECsptl.LAY*4,'k','linewidth',1)
+datetick('x','keeplimits')
+ylabel('y-tilt (\murad)')
+legend('BOPT','SPOTL','location','northeast')
+
+% ASHES
+subplot(425)
 datetick('x','keeplimits')
 set(gca,'xticklabel',[])
-% Eastern Caldera
-subplot(422)
-plot(AXEC2.time,detrend(AXEC2.LAX-mean(AXEC2.LAX)),'linewidth',1)
+ylabel('x-tilt (\murad)')
+title('Ashes Vent Field')
+subplot(427)
+datetick('x','keeplimits')
+ylabel('y-tilt (\murad)')
+
+% International District
+subplot(426)
+plot(AXID1.time,detrend(AXID1.LAX-mean(AXID1.LAX)),'linewidth',1)
+hold on
+plot(AXIDsptl.time,AXIDsptl.LAX*4,'k','linewidth',1)
 datetick('x','keeplimits')
 set(gca,'xticklabel',[])
-subplot(424)
-plot(AXEC2.time,detrend(AXEC2.LAY-mean(AXEC2.LAY)),'linewidth',1)
+ylabel('x-tilt (\murad)')
+title('International District')
+legend('BOPT','SPOTL','location','northeast')
+subplot(428)
+plot(AXID1.time,detrend(AXID1.LAY-mean(AXID1.LAY)),'linewidth',1)
+hold on
+plot(AXIDsptl.time,AXIDsptl.LAY*4,'k','linewidth',1)
 datetick('x','keeplimits')
-set(gca,'xticklabel',[])
+ylabel('y-tilt (\murad)')
+legend('BOPT','SPOTL','location','northeast')
     
-%     for i=1:2
-%         file_string=['AXCC1_' cha1{i} '_' t1_s '.miniseed'];
-%         %attempt download if file not found
-%         if ~exist(['../tiltcompare/AXCC1/' file_string],'file')
-%             IRIS_data_pull('AXCC1',cha1{i},'11',t1,t1+1);
-%         end
-%         %some dates have no data (power failure, etc.)
-%         if exist(['../tiltcompare/AXCC1/' file_string],'file')
-%             temp=rdmseed(['../tiltcompare/AXCC1/' file_string]);
-%             dtemp=double(cat(1,temp.d));
-%             if length(dtemp)<3600 %short timeseries will throw errors
-%                 t1=t1+1;
-%                 continue
-%             end
-%             dtempd=decimate(dtemp,6,'fir');
-%             dtempd=decimate(dtempd,10,'fir');
-%             eval(['AXCC1.' cha1{i} '=[AXCC1.' cha1{i} ';dtempd];']);
-%             if i==1
-%                 ttemp=cat(1,temp.t);
-%                 ttempd=decimate(ttemp,6,'fir');
-%                 ttempd=decimate(ttempd,10,'fir');
-%                 AXCC1.time=[AXCC1.time;ttempd];
-%             end
-%         end
-%     end
-%     for j=1:4
-%         file_string=['AXCC2_' cha2{j} '_' t1_s '.miniseed'];
-%         %attempt download if file not found
-%         if ~exist(['../tiltcompare/AXCC2/' file_string],'file')
-%             IRIS_data_pull('AXCC2',cha2{j},'--',t1,t1+1);
-%         end
-%         %some dates have no data (power failure, etc.)
-%         if exist(['../tiltcompare/AXCC2/' file_string],'file')
-%             temp=rdmseed(['../tiltcompare/AXCC2/' file_string]);
-%             dtemp=double(cat(1,temp.d));
-%             if length(dtemp)<3600 %short timeseries will throw errors
-%                 t1=t1+1;
-%                 continue
-%             end
-%             dtempd=decimate(dtemp,12,'fir');
-%             dtempd=decimate(dtempd,10,'fir');
-%             dtempd=decimate(dtempd,5,'fir');
-%             dtempd=decimate(dtempd,4,'fir');
-%             eval(['AXCC2.' cha2{j} '=[AXCC2.' cha2{j} ';dtempd];']);
-%             if j==1
-%                 ttemp=cat(1,temp.t);
-%                 ttempd=decimate(ttemp,12,'fir');
-%                 ttempd=decimate(ttempd,10,'fir');
-%                 ttempd=decimate(ttempd,5,'fir');
-%                 ttempd=decimate(ttempd,4,'fir');
-%                 AXCC2.time=[AXCC2.time;ttempd];
-%             end
-%         end
-%     end
-%     t1=t1+1;
-% end
-% 
-% 
-% %%
-% dayn=daylist(i);
-% datestr(dayn)
-% data=[];
-% cha={'MNE','MNN','MNZ'};
-% for j=1:length(cha)
-%     IRIS_data_pull('AXCC2',cha{j},'--',dayn,dayn+1)
-%     if ~exist(['../tiltcompare/AXCC2/AXCC2_' cha{j} '_' datestr(dayn,29) '.miniseed'],'file')
-%         cha={'BNE','BNN','BNZ'};
-%         if ~exist(['../tiltcompare/AXCC2/AXCC2_' cha{j} '_' datestr(dayn,29) '.miniseed'],'file')
-%             IRIS_data_pull('AXCC2',cha{j},'--',dayn,dayn+1);
-%         end
-%     end
-%     temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{j} '_' datestr(dayn,29) '.miniseed']);
-%     data.t=cat(1,temp.t);
-%     data.a(:,j)=cat(1,temp.d)/10^7;
-% end
-% temp=sqrt(data.a(:,1).^2+data.a(:,2).^2+data.a(:,3).^2);
-% data.a=cat(2,temp,data.a);
-% % probably worthwhile to add in something that trims data to just
-% % the necessary 10 minute window
-% 
-% for j=1:5
-%     iflips=find(floor(flipInfoSome.t)==dayn);
-%     label_strings={'Total Accel (m/s^2)','x (m/s^2)','y (m/s^2)','z (m/s^2)'};
-%     figure(j)
-%     subplot(411)
-%     title([orientation_strings{j} ' Calibration'])
-%     for k=1:4
-%         subplot(4,1,k)
-%         hold on
-%         plot(data.t-data.t(1),data.a(:,k),'c','linewidth',1);
-%         xlim([flipInfoSome.t(iflips(j))-data.t(1)+15/60/60/24 flipInfoSome.t(iflips(j))-data.t(1)+(flipInfoSome.duration(iflips(j))-5)/60/60/24])
-%         ylabel(label_strings{k})
-%         set(gca,'xtick',[])
-%         box on
-%     end
-%     datetick('x','keeplimits')
-% end
-% 
-% %%
-% %%%%%%%%%%%%CONFIG%%%%%%%%%%%%%%
-% cha1='HNZ';
-% cha2='BNZ';
-% 
-% fac1=314252;
-% fac2=10^7;
-% %%%%%%%%END CONFIG%%%%%%%%%%%%%%
-% 
-% for i=1:30
-%     t0=datenum(2019,4,1)+i-1;
-%     t0_s=datestr(t0,31); t0_s=t0_s(1:10);
-%     
-%     AXCC1=rdmseed(['../tiltcompare/AXCC1/AXCC1_' cha1 '_' t0_s '.miniseed']);
-%     t1=cat(1,AXCC1.t);
-%     z1=cat(1,AXCC1.d);
-%     
-%     AXCC2=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha2 '_' t0_s '.miniseed']);
-%     t2=cat(1,AXCC2.t);
-%     z2=cat(1,AXCC2.d);
-%     
-%     figure(77)
-%     clf
-%     plot(t1,(z1-mean(z1))/fac1,'linewidth',1)
-%     hold on
-%     plot(t2,(z2-mean(z2))/fac2,'linewidth',1)
-%     set(gca,'fontsize',18)
-%     ylabel('Acceleration (m/s^2)')
-%     datetick('x')
-%     title(t0_s)
-%     
-%     orient landscape
-%     fh=gcf;
-%     fh.PaperUnits='inches';
-%     fh.PaperPosition=[0 0 11 8.5];
-%     print(['../tiltcompare/dailycomps/' t0_s],'-dtiff')
-% end
-% 
-% clear; close all;
-% 
-% %%
-% %%%%%%%%%%CONFIG%%%%%%%%%%
-% loaddata=true;
-% tf=datenum(date);
-% 
-% sta='AXCC2';
-% dec=[8 10 6 10 6];
-% %%%%%%%%END CONFIG%%%%%%%%
-% 
-% % Load pre-exisiting structure, if it exists
-% if loaddata && exist('../calibrations/Axial/axialdata_hr.mat','file')
-%     load('../calibrations/Axial/axialdata_hr.mat')
-%     load('../calibrations/Axial/axialdata_min.mat')
-%     t0=ceil(data_min.t(end));
-% else
-%     t0=datenum(2018,10,13);
-% end
-% 
-% % Determine datenums of calibrations
-% load('../calibrations/Axial/axialdata.mat','flipInfoAll')
-% [daylist,id,~]=unique(floor(flipInfoAll.t));
-% 
-% if t0==datenum(2018,10,13)
-%     data_min.t=[];data_min.MNE=[];data_min.MNN=[];data_min.MNZ=[];
-%     data_min.MKA=[];data_min.iflip=[];
-%     data_hr.t=[];data_hr.MNE=[];data_hr.MNN=[];data_hr.MNZ=[];
-%     data_hr.MKA=[];data_hr.iflip=[];
-% end
-% 
-% t1=t0;
-% while t1<tf
-%     t1_s=datestr(t1,31); t1_s=t1_s(1:10);
-%     MNN_string=[sta '_MNN_' t1_s '.miniseed'];
-%     MNE_string=[sta '_MNE_' t1_s '.miniseed'];
-%     MNZ_string=[sta '_MNZ_' t1_s '.miniseed'];
-%     MKA_string=[sta '_MKA_' t1_s '.miniseed'];
-% 
-%     %attempt download if file not found
-%     if ~exist(['../tiltcompare/' sta '/' MNN_string],'file') || ...
-%             ~exist(['../tiltcompare/' sta '/' MNE_string],'file') || ...
-%             ~exist(['../tiltcompare/' sta '/' MNZ_string],'file') || ...
-%             ~exist(['../tiltcompare/' sta '/' MKA_string],'file')
-%         IRIS_data_pull(sta,'MNN','--',t1,t1+1);
-%         IRIS_data_pull(sta,'MNE','--',t1,t1+1);
-%         IRIS_data_pull(sta,'MNZ','--',t1,t1+1);
-%         IRIS_data_pull(sta,'MKA','--',t1,t1+1);
-%     end
-%     %some dates have no data (power failure, etc.)
-%     if exist(['../tiltcompare/' sta '/' MNN_string],'file') && ...
-%             exist(['../tiltcompare/' sta '/' MNE_string],'file') && ...
-%             exist(['../tiltcompare/' sta '/' MNZ_string],'file') && ...
-%             exist(['../tiltcompare/' sta '/' MKA_string],'file')
-%         %MNN channel
-%         temp=rdmseed(['../tiltcompare/' sta '/' MNN_string]);
-%         ntemp=double(cat(1,temp.d));
-%         %decimate to 1 sample/min
-%         ntempd=decimate(ntemp,dec(1),'fir');
-%         ntempd=decimate(ntempd,dec(2),'fir');
-%         ntempd=decimate(ntempd,dec(3),'fir');
-%         %note calibration signal
-%         [checkcal,iflip]=max(abs(ntempd));
-%         if checkcal/10^7>9
-%             data_min.iflip=[data_min.iflip;length(data_min.t)+(iflip-10:iflip+10)'];
-%         end
-%     end
-%     
-% end
-% 
+fh=gcf;
+fh.PaperUnits='inches';
+fh.PaperPosition=[0 0 11 8.5];
+print(['../tidal_comp/tilt_' svstr],'-dtiff','-r300')
+
+% compare AXCC1 pressure to tidal amplitude
+[h,th]=oceantide(45.955002,-130.008743,-t0,-t1,3600,'osu','datenum');
+
+figure
+hold on
+yyaxis left
+plot(AXCC1.time,(AXCC1.BDO-mean(AXCC1.BDO))/1.45038E-4/10065)
+ylabel('bopt pressure (m)')
+yyaxis right
+plot(th,h)
+datetick('x','keeplimits')
+ylabel('spotl tidal amplitude (m)')
+title('central caldera')
+set(gca,'fontsize',14)
+
+fh=gcf;
+fh.PaperUnits='inches';
+fh.PaperPosition=[0 0 11 8.5];
+print(['../tidal_comp/AXCC1_pressureVspotl_' svstr],'-dtiff','-r300')
+
+%% COMPARISON METRICS
+% power spectra
+[AXCC2.fx,AXCC2.ax]=amplitudespectrum(AXCC2.time,AXCC2.LAX-mean(AXCC2.LAX));
+[AXCC2.fy,AXCC2.ay]=amplitudespectrum(AXCC2.time,AXCC2.LAY-mean(AXCC2.LAX));
+
+[AXCC1.fx,AXCC1.ax]=amplitudespectrum(AXCC1.time,AXCC1.LAX-mean(AXCC1.LAX));
+[AXCC1.fy,AXCC1.ay]=amplitudespectrum(AXCC1.time,AXCC1.LAY-mean(AXCC1.LAX));
+
+[AXCCsptl.fx,AXCCsptl.ax]=amplitudespectrum(AXCCsptl.time,AXCCsptl.LAX-mean(AXCCsptl.LAX));
+[AXCCsptl.fy,AXCCsptl.ay]=amplitudespectrum(AXCCsptl.time,AXCCsptl.LAY-mean(AXCCsptl.LAX));
+
+figure
+loglog(AXCC2.fx,AXCC2.ax,'linewidth',1)
+hold on
+loglog(AXCC1.fx,AXCC1.ax,'linewidth',1)
+loglog(AXCCsptl.fx,AXCCsptl.ax,'linewidth',1)
+ylabel('Amplitude')
+xlabel('Frequency (1/day)')
+legend('BOPT','SCTA','SPOTL','location','northeast')
+set(gca,'fontsize',14)
+
+fh=gcf;
+fh.PaperUnits='inches';
+fh.PaperPosition=[0 0 11 8.5];
+print(['../tidal_comp/spectra_' svstr],'-dtiff','-r300')
+
+% cross correlations
+% resample model to 1 sample/minute
+xtemp1=interp1(AXCCsptl.time,AXCCsptl.LAX,AXCC1.time);
+ytemp1=interp1(AXCCsptl.time,AXCCsptl.LAY,AXCC1.time);
+[cross1x,lag1x]=xcorr(AXCC1.LAX,xtemp1,'normalized');
+[cross1y,lag1y]=xcorr(AXCC1.LAY,ytemp1,'normalized');
+
+xtemp2=interp1(AXCCsptl.time,AXCCsptl.LAX,AXCC2.time);
+ytemp2=interp1(AXCCsptl.time,AXCCsptl.LAY,AXCC2.time);
+[cross2x,lag2x]=xcorr(AXCC2.LAX,xtemp2,'normalized');
+[cross2y,lag2y]=xcorr(AXCC2.LAY,ytemp2,'normalized');
+
+figure
+subplot(211)
+plot(lag2x,cross2x,'linewidth',1)
+hold on
+plot(lag1x,cross1x,'linewidth',1)
+text(length(lag1x)*1/4,0.5,num2str(round(max(abs(cross2x)),2)),'color','b','fontsize',12)
+text(length(lag1x)*1/4,-0.5,num2str(round(max(abs(cross1x)),2)),'color','r','fontsize',12)
+ylabel('X cross correlation')
+set(gca,'xticklabel',[])
+legend('BOPT','SCTA','location','northeast')
+set(gca,'fontsize',14)
+subplot(212)
+plot(lag2y,cross2y,'linewidth',1)
+hold on
+plot(lag1y,cross1y,'linewidth',1)
+text(length(lag1x)*1/4,0.5,num2str(round(max(abs(cross2y)),2)),'color','b','fontsize',12)
+text(length(lag1x)*1/4,-0.5,num2str(round(max(abs(cross1y)),2)),'color','r','fontsize',12)
+ylabel('Y cross correlation')
+xlabel('Lags (minutes)')
+legend('BOPT','SCTA','location','northeast')
+set(gca,'fontsize',14)
+
+fh=gcf;
+fh.PaperUnits='inches';
+fh.PaperPosition=[0 0 11 8.5];
+print(['../tidal_comp/xcorr_' svstr],'-dtiff','-r300')
