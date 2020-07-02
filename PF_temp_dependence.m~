@@ -87,13 +87,12 @@ else
         [zeros(size(t_X1));zeros(size(t_X2a));t_X2b;zeros(size(t_negX))],...
         [zeros(size(t_X1));zeros(size(t_X2a));zeros(size(t_X2b));t_negX],...
         [T_X1;T_X2a;T_X2b;T_negX],...
-        [dT_X1;dT_X2a;dT_X2b;dT_negX],...
         [ones(size(T_X1));zeros(size(t_X2a));zeros(size(t_X2b));zeros(size(T_negX))],...
         [zeros(size(T_X1));ones(size(t_X2a));zeros(size(t_X2b));zeros(size(T_negX))],...
         [zeros(size(T_X1));zeros(size(t_X2a));ones(size(t_X2b));zeros(size(T_negX))],...
         [zeros(size(T_X1));zeros(size(t_X2a));zeros(size(t_X2b));ones(size(T_negX))]];
     
-    m_X=(G_X'*G_X)\G_X'*[a_X1;a_negX];
+    m_X=(G_X'*G_X)\G_X'*[a_X1;a_X2a;a_X2b;a_negX];
     a_X_star=G_X*m_X;
 end
 
@@ -231,11 +230,12 @@ fh.PaperPosition=[0 0 11 8.5];
 if dT_dep
     print('../calibrations/PinonFlat/T_dependence/negX_dT','-dtiff','-r300')
     saveas(gcf,'../calibrations/PinonFlat/T_dependence/negX_dT.fig')
+    save('../calibrations/PinonFlat/T_dependence/X_dT','m_X','a_X_star')
 else
     print('../calibrations/PinonFlat/T_dependence/negX','-dtiff','-r300')
     saveas(gcf,'../calibrations/PinonFlat/T_dependence/negX.fig')
+    save('../calibrations/PinonFlat/T_dependence/X_T','m_X','a_X_star')
 end
-% save('../calibrations/PinonFlat/T_dependence/X1','a_X1','t_X1','T_X1','G_X','m_X','a_X_star','a_negX','t_negX','T_negX')
 
 % +Y and -Y
 a_Y=flipInfoAll.gCal([35:3:59,62:5:end]);
@@ -271,7 +271,7 @@ if dT_dep
     
     % resample to original times
     [~,iy,~]=intersect(round(td_Y),round(t_Y));
-    a_Y_star=ad_Y_star(iy1);
+    a_Y_star=ad_Y_star(iy);
     [~,inegy,~]=intersect(ceil(td_negY),ceil(t_negY));
     a_Y_star=[a_Y_star;ad_Y_star(length(td_Y)+inegy)];
 else
@@ -286,38 +286,22 @@ else
     a_Y_star=G_Y*m_Y;
 end
 
-% PLOTS TO VERIFY EVERYTHING LOOKS OK
-figure
-plot(td_X1,ad_X1,'o')
-hold on
-plot(td_X1,ad_X_star(1:length(td_X1)),'x')
-yyaxis right
-plot(td_X1,Td_X1) %temperature
-% plot(td_X1,ad_X1-ad_X_star(1:length(td_X1)),'x') %residual
-
-figure
-plot(td_X2a,ad_X2a,'o')
-hold on
-plot(td_X2a,ad_X_star(length(td_X1)+1:length(td_X1)+length(td_X2a)),'x')
-yyaxis right
-plot(td_X2a,Td_X2a)
-% plot(td_X2a,ad_X2a-ad_X_star(length(td_X1)+1:length(td_X1)+length(td_X2a)),'x')
-
-figure
-plot(td_X2b,ad_X2b,'o')
-hold on
-plot(td_X2b,ad_X_star(length(td_X1)+length(td_X2a)+1:length(td_X1)+length(td_X2a)+length(td_X2b)),'x')
-yyaxis right
-plot(td_X2b,Td_X2b)
-% plot(td_X2b,ad_X2b-ad_X_star(length(td_X1)+length(td_X2a)+1:length(td_X1)+length(td_X2a)+length(td_X2b)),'x')
-
-figure
-plot(td_negX,ad_negX,'o')
-hold on
-plot(td_negX,ad_X_star(length(td_X1)+length(td_X2a)+length(td_X2b)+1:length(td_X1)+length(td_X2a)+length(td_X2b)+length(td_negX)),'x')
-yyaxis right
-plot(td_negX,Td_negX)
-% plot(td_negX,ad_negX-ad_X_star(length(td_X1)+length(td_X2a)+length(td_X2b)+1:length(td_X1)+length(td_X2a)+length(td_X2b)+length(td_negX)),'x')
+% % PLOTS TO VERIFY EVERYTHING LOOKS OK
+% figure
+% plot(td_Y,ad_Y,'o')
+% hold on
+% plot(td_Y,ad_Y_star(1:length(td_Y)),'x')
+% yyaxis right
+% plot(td_Y,Td_Y) %temperature
+% % plot(td_Y,ad_Y-ad_X_star(1:length(td_Y)),'x') %residual
+% 
+% figure
+% plot(td_negY,ad_negY,'o')
+% hold on
+% plot(td_negY,ad_Y_star(length(td_Y)+1:length(td_Y)+length(td_negY)),'x')
+% yyaxis right
+% plot(td_negY,Td_negY)
+% % plot(td_negY,ad_negY-ad_Y_star(length(td_Y)+1:length(td_Y)+length(td_negY)),'x')
 
 % PLOTTING
 figure
@@ -343,8 +327,13 @@ box on
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
-print('../calibrations/PinonFlat/T_dependence/Y','-dtiff','-r300')
-saveas(gcf,'../calibrations/PinonFlat/T_dependence/Y.fig')
+if dT_dep
+    print('../calibrations/PinonFlat/T_dependence/Y_dT','-dtiff','-r300')
+    saveas(gcf,'../calibrations/PinonFlat/T_dependence/Y_dT.fig')
+else
+    print('../calibrations/PinonFlat/T_dependence/Y','-dtiff','-r300')
+    saveas(gcf,'../calibrations/PinonFlat/T_dependence/Y.fig')
+end
 
 figure
 hold on
@@ -369,6 +358,12 @@ box on
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
-print('../calibrations/PinonFlat/T_dependence/negY','-dtiff','-r300')
-saveas(gcf,'../calibrations/PinonFlat/T_dependence/negY.fig')
-save('../calibrations/PinonFlat/T_dependence/Y','a_Y','t_Y','T_Y','G_Y','m_Y','a_Y_star','a_negY','t_negY','T_negY')
+if dT_dep
+    print('../calibrations/PinonFlat/T_dependence/negY_dT','-dtiff','-r300')
+    saveas(gcf,'../calibrations/PinonFlat/T_dependence/negY_dT.fig')
+    save('../calibrations/PinonFlat/T_dependence/Y_dT','m_Y')
+else
+    print('../calibrations/PinonFlat/T_dependence/negY','-dtiff','-r300')
+    saveas(gcf,'../calibrations/PinonFlat/T_dependence/negY.fig')
+    save('../calibrations/PinonFlat/T_dependence/Y_T','m_Y')
+end

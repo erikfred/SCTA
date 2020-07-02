@@ -230,11 +230,12 @@ fh.PaperPosition=[0 0 11 8.5];
 if dT_dep
     print('../calibrations/PinonFlat/T_dependence/negX_dT','-dtiff','-r300')
     saveas(gcf,'../calibrations/PinonFlat/T_dependence/negX_dT.fig')
+    save('../calibrations/PinonFlat/T_dependence/X_dT','m_X','a_X_star')
 else
     print('../calibrations/PinonFlat/T_dependence/negX','-dtiff','-r300')
     saveas(gcf,'../calibrations/PinonFlat/T_dependence/negX.fig')
+    save('../calibrations/PinonFlat/T_dependence/X_T','m_X','a_X_star')
 end
-% save('../calibrations/PinonFlat/T_dependence/X1','a_X1','t_X1','T_X1','G_X','m_X','a_X_star','a_negX','t_negX','T_negX')
 
 % +Y and -Y
 a_Y=flipInfoAll.gCal([35:3:59,62:5:end]);
@@ -360,8 +361,9 @@ fh.PaperPosition=[0 0 11 8.5];
 if dT_dep
     print('../calibrations/PinonFlat/T_dependence/negY_dT','-dtiff','-r300')
     saveas(gcf,'../calibrations/PinonFlat/T_dependence/negY_dT.fig')
+    save('../calibrations/PinonFlat/T_dependence/Y_dT','m_Y','a_Y_star')
 else
     print('../calibrations/PinonFlat/T_dependence/negY','-dtiff','-r300')
     saveas(gcf,'../calibrations/PinonFlat/T_dependence/negY.fig')
+    save('../calibrations/PinonFlat/T_dependence/Y_T','m_Y','a_Y_star')
 end
-% save('../calibrations/PinonFlat/T_dependence/Y','a_Y','t_Y','T_Y','G_Y','m_Y','a_Y_star','a_negY','t_negY','T_negY')

@@ -236,7 +236,7 @@ legend('BOPT','SPOTL','location','northeast')
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
-print(['../tidal_comp/tilt_' svstr],'-dtiff','-r300')
+print(['../tidal_comp/Axial/tilt_' svstr],'-dtiff','-r300')
 
 % compare AXCC1 pressure to tidal amplitude
 [h,th]=oceantide(45.955002,-130.008743,-t0,-t1,3600,'osu','datenum');
@@ -256,7 +256,7 @@ set(gca,'fontsize',14)
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
-print(['../tidal_comp/AXCC1_pressureVspotl_' svstr],'-dtiff','-r300')
+print(['../tidal_comp/Axial/AXCC1_pressureVspotl_' svstr],'-dtiff','-r300')
 
 %% COMPARISON METRICS
 % power spectra
@@ -282,7 +282,7 @@ set(gca,'fontsize',14)
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
-print(['../tidal_comp/spectra_' svstr],'-dtiff','-r300')
+print(['../tidal_comp/Axial/spectra_' svstr],'-dtiff','-r300')
 
 % cross correlations
 % resample model to 1 sample/minute
@@ -322,4 +322,4 @@ set(gca,'fontsize',14)
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
-print(['../tidal_comp/xcorr_' svstr],'-dtiff','-r300')
+print(['../tidal_comp/Axial/xcorr_' svstr],'-dtiff','-r300')
