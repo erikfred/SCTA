@@ -23,13 +23,14 @@ path(path,genpath('/Users/erikfred/Documents/spotl/EKF_spotl/'))
 % PF SCTA data
 load('../calibrations/Axial/axialstitch_min_temp.mat','stitch_min')
 [~,i1]=min(abs(stitch_min.t-datenum(2019,07,08)));
-[~,i2]=min(abs(stitch_min.t-datenum(2019,08,06)));
+[~,i2]=min(abs(stitch_min.t-datenum(2019,08,04)));
 SCTA.t=stitch_min.t(i1:i2);
-SCTA.e=stitch_min.LAX(i1:i2)*10^3; % [nrad]
-SCTA.n=stitch_min.LAY(i1:i2)*10^3; % [nrad]
-% 1 sample/day high pass filter
-[b,a]=butter(4,2*(1/60/60/24)/(1/60),'high');
-AXCC2.LAX=filtfilt(b,a,AXCC2.LAX);
+% note orientation such that y:west and x:north
+SCTA.n=-1*fillmissing(stitch_min.LAX(i1:i2),'linear')*10^3; % [nrad]
+SCTA.e=fillmissing(stitch_min.LAY(i1:i2),'linear')*10^3; % [nrad]
+[b,a]=butter(4,2*(1/60/60/48)/(1/60),'high');
+SCTA.e=filtfilt(b,a,SCTA.e);
+SCTA.n=filtfilt(b,a,SCTA.n);
 
 % plot and compare
 figure

@@ -25,8 +25,9 @@ load('../calibrations/Axial/axialstitch_min_temp.mat','stitch_min')
 [~,i1]=min(abs(stitch_min.t-datenum(2019,07,08)));
 [~,i2]=min(abs(stitch_min.t-datenum(2019,08,04)));
 SCTA.t=stitch_min.t(i1:i2);
-SCTA.e=fillmissing(stitch_min.LAX(i1:i2),'linear')*10^3; % [nrad]
-SCTA.n=fillmissing(stitch_min.LAY(i1:i2),'linear')*10^3; % [nrad]
+% note orientation such that y:west and x:north
+SCTA.n=-1*fillmissing(stitch_min.LAX(i1:i2),'linear')*10^3; % [nrad]
+SCTA.e=fillmissing(stitch_min.LAY(i1:i2),'linear')*10^3; % [nrad]
 [b,a]=butter(4,2*(1/60/60/48)/(1/60),'high');
 SCTA.e=filtfilt(b,a,SCTA.e);
 SCTA.n=filtfilt(b,a,SCTA.n);
@@ -37,18 +38,24 @@ subplot(211)
 hold on
 plot(PF.t,PF.e,'linewidth',1)
 plot(spotl.t,spotl.e,'linewidth',1)
+plot(SCTA.t,SCTA.e)
+xlim([datenum(2019,07,08) datenum(2019,08,04)])
 datetick('x','keeplimits')
 ylabel('E tilt (nrad)')
-legend('Zumberge','SPOTL')
+legend('Zumberge','SPOTL','SCTA')
 set(gca,'fontsize',12)
+box on
 subplot(212)
 hold on
 plot(PF.t,PF.n,'linewidth',1)
 plot(spotl.t,spotl.n,'linewidth',1)
+plot(SCTA.t,SCTA.n)
+xlim([datenum(2019,07,08) datenum(2019,08,04)])
 datetick('x','keeplimits')
 ylabel('N tilt (nrad)')
-legend('Zumberge','SPOTL')
+legend('Zumberge','SPOTL','SCTA')
 set(gca,'fontsize',12)
+box on
 
 fh=gcf;
 fh.PaperUnits='inches';

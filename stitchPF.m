@@ -237,7 +237,7 @@ stitch_hr.LAY=asin(stitch_hr.MNN/9.81)*10^6;stitch_hr.LAY=stitch_hr.LAY-stitch_h
 
 %save figures, variables
 % save('../calibrations/Axial/axialstitch_hr.mat','stitch_hr')
-save('../calibrations/Axial/axialstitch_min_temp.mat','stitch_min')
+save('../calibrations/PinonFlat/PFstitch_min_temp.mat','stitch_min')
 
 %% plot and compare to AXCC1 Lily tiltmeter
 t0=floor(stitch_min.t(1));
