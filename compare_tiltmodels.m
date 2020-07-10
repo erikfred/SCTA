@@ -21,7 +21,7 @@ path(path,genpath('/Users/erikfred/Documents/spotl/EKF_spotl/'))
     -datenum(2018,10,09),-datenum(2020,03,05),3600,1290,'osu','continent','datenum');
 
 % PF SCTA data
-load('../calibrations/Axial/axialstitch_min_temp.mat','stitch_min')
+load('../calibrations/PinonFlat/PFstitch_min_temp.mat','stitch_min')
 [~,i1]=min(abs(stitch_min.t-datenum(2019,07,08)));
 [~,i2]=min(abs(stitch_min.t-datenum(2019,08,04)));
 SCTA.t=stitch_min.t(i1:i2);

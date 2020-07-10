@@ -9,16 +9,17 @@ clear; close all;
 
 %%%%%%%%%%CONFIG%%%%%%%%%%
 axial=false;
-pf=true;
+lily=true;
+pf=false;
 
-loaddata=false;
-tf=datenum(2020,01,10);
-
-sta='AXCC2';
-dec=[8 10 6 10 6];
+loaddata=true;
+tf=datenum(2020,01,10); % temp until odd calibrations figured out
 %%%%%%%%END CONFIG%%%%%%%%
 
 if axial
+    sta='AXCC2';
+    dec=[8 10 6 10 6];
+
     % Load pre-exisiting structure, if it exists
     if loaddata && exist('../calibrations/Axial/axialdata_hr.mat','file')
         load('../calibrations/Axial/axialdata_hr.mat')
@@ -153,6 +154,124 @@ if axial
     save('../calibrations/Axial/axialdata_min.mat','data_min')
 end
 
+if lily
+    sta='AXCC1';
+    
+    % Load pre-exisiting structure, if it exists
+    if loaddata && exist('../tiltcompare/SCTA_Lily_comp/AXCC1data_hr.mat','file')
+        load('../tiltcompare/SCTA_Lily_comp/AXCC1data_hr.mat')
+        load('../tiltcompare/SCTA_Lily_comp/AXCC1data_min.mat')
+        t0=ceil(lily_min.t(end));
+    else
+        t0=datenum(2018,10,13);
+    end
+    
+    if t0==datenum(2018,10,13)
+        lily_min.t=[];lily_min.LAX=[];lily_min.LAY=[];lily_min.BDO=[];
+        lily_hr.t=[];lily_hr.LAX=[];lily_hr.LAY=[];lily_hr.BDO=[];
+    end
+    
+    t1=t0;
+    while t1<tf
+        t1_s=datestr(t1,31); t1_s=t1_s(1:10);
+        LAY_string=[sta '_LAY_' t1_s '.miniseed'];
+        LAX_string=[sta '_LAX_' t1_s '.miniseed'];
+        BDO_string=[sta '_BDO_' t1_s '.miniseed'];
+        
+        %attempt download if file not found
+        if ~exist(['../tiltcompare/' sta '/' LAY_string],'file') || ...
+                ~exist(['../tiltcompare/' sta '/' LAX_string],'file') || ...
+                ~exist(['../tiltcompare/' sta '/' BDO_string],'file')
+            IRIS_data_pull(sta,'LAY','11',t1,t1+1);
+            IRIS_data_pull(sta,'LAX','11',t1,t1+1);
+            IRIS_data_pull(sta,'BDO','11',t1,t1+1);
+        end
+        %some dates have no data (power failure, etc.)
+        if exist(['../tiltcompare/' sta '/' LAY_string],'file') && ...
+                exist(['../tiltcompare/' sta '/' LAX_string],'file') && ...
+                exist(['../tiltcompare/' sta '/' BDO_string],'file')
+            
+            %LAY channel
+            temp=rdmseed(['../tiltcompare/' sta '/' LAY_string]);
+            ttemp=cat(1,temp.t);
+            ntemp=double(cat(1,temp.d));
+            %downsample to 1 sample/min
+            [ttempd,ntempd,~,~]=downsample_uneven5(ttemp,ntemp,1/(24*60));
+            
+            %LAX channel
+            temp=rdmseed(['../tiltcompare/' sta '/' LAX_string]);
+            ttemp=cat(1,temp.t);
+            etemp=double(cat(1,temp.d));
+            %downsample to 1 sample/min
+            [~,etempd,~,~]=downsample_uneven5(ttemp,etemp,1/(24*60));
+            
+            %BDO channel
+            temp=rdmseed(['../tiltcompare/' sta '/' BDO_string]);
+            ttemp=cat(1,temp.t);
+            ztemp=double(cat(1,temp.d));
+            %downsample to 1 sample/min
+            [ttest,ztempd,~,~]=downsample_uneven5(ttemp,ztemp,1/(24*60));
+
+            %append
+            if length(ttempd)==length(etempd) && length(ttempd)==length(ntempd) ...
+                    && length(ttempd)==length(ztempd)
+                lily_min.LAY=[lily_min.LAY; ntempd]; % [urad]
+                lily_min.LAX=[lily_min.LAX; etempd]; % [urad]
+                lily_min.BDO=[lily_min.BDO; ztempd/(1.45038e-4)]; % [Pa]
+                lily_min.t=[lily_min.t; ttempd];
+            else % auto-fix missing data at start or end
+                tilttime1=datetime(ttempd(1),'convertfrom','datenum');
+                prestime1=datetime(ttest(1),'convertfrom','datenum');
+                tilttime2=datetime(ttempd(end),'convertfrom','datenum');
+                prestime2=datetime(ttest(end),'convertfrom','datenum');
+                if
+                    
+                elseif tilttime1~=prestime1
+                    ldif=length(etempd)-length(ztempd);
+                    ztempd=[NaN(ldif,1);ztempd];
+                elseif tilttime2~=prestime2
+                    ldif=length(etempd)-length(ztempd);
+                    ztempd=[ztempd;NaN(ldif,1)];
+                end
+                % check if auto-fix worked
+                if length(ttempd)==length(etempd) && length(ttempd)==length(ntempd) ...
+                        && length(ttempd)==length(ztempd)
+                    lily_min.LAY=[lily_min.LAY; ntempd]; % [urad]
+                    lily_min.LAX=[lily_min.LAX; etempd]; % [urad]
+                    lily_min.BDO=[lily_min.BDO; ztempd/(1.45038e-4)]; % [Pa]
+                    lily_min.t=[lily_min.t; ttempd];
+                else % keyboard control for more complicated issues
+                    warning('vectors have different lengths')
+                    keyboard
+                end
+            end
+            
+            % hourly version
+            if length(ntempd)>620 %minimum length for decimation filter
+                %downsample all to a sample/hr
+                [~,ntempd,~,~]=downsample_uneven5(ttempd,ntempd,1/(24));
+                [~,etempd,~,~]=downsample_uneven5(ttempd,etempd,1/(24));
+                [ttempd,ztempd,~,~]=downsample_uneven5(ttempd,ztempd,1/(24));
+                %append
+                if length(ttempd)==length(etempd) && length(ttempd)==length(ntempd) ...
+                        && length(ttempd)==length(ztempd)
+                    lily_hr.LAY=[lily_hr.LAY; ntempd]; % [urad]
+                    lily_hr.LAX=[lily_hr.LAX; etempd]; % [urad]
+                    lily_hr.BDO=[lily_hr.BDO; ztempd/(1.45038e-4)]; % [Pa]
+                    lily_hr.t=[lily_hr.t; ttempd];
+                else
+                    warning('vectors have different lengths')
+                    keyboard
+                end
+            end
+        end
+        t1=t1+1;
+    end
+    
+    save('../tiltcompare/SCTA_Lily_comp/AXCC1data_hr.mat','lily_hr')
+    save('../tiltcompare/SCTA_Lily_comp/AXCC1data_min.mat','lily_min')
+end
+
 if pf
     % Load pre-exisiting structure, if it exists
     if loaddata && exist('../calibrations/PinonFlat/PFdata_hr.mat','file')
@@ -179,6 +298,7 @@ if pf
     while t1<tf
         data=get_sctaDay('/Volumes/GoogleDrive/My Drive/Oceanography/SCTA-Share/OOI-PF/SCTA-PF/ParsedData',t1);
         if isempty(data.t)
+            t1=t1+1;
             continue
         end
         
@@ -237,7 +357,7 @@ if pf
         end
         
         % hourly version
-        if length(ntempd)>620 %minimum length for decimation filter
+        if length(Ttempd)>620 %minimum length for decimation filter
             %decimate all to a sample/hr
             ytempd=decimate(ytempd,10,'fir'); ytempd=decimate(ytempd,6,'fir');
             xtempd=decimate(xtempd,10,'fir'); xtempd=decimate(xtempd,6,'fir');
@@ -247,10 +367,10 @@ if pf
             %append
             if length(ttempd)==length(xtempd) && length(ttempd)==length(ytempd) ...
                     && length(ttempd)==length(ztempd) && length(ttempd)==length(Ttempd)
-                data_hr.MNN=[data_hr.MNN; ntempd/10^7];
-                data_hr.MNE=[data_hr.MNE; etempd/10^7];
-                data_hr.MNZ=[data_hr.MNZ; ztempd/10^7];
-                data_hr.MKA=[data_hr.MKA; Ttempd/10^7];
+                data_hr.MNN=[data_hr.MNN; ytempd];
+                data_hr.MNE=[data_hr.MNE; xtempd];
+                data_hr.MNZ=[data_hr.MNZ; ztempd];
+                data_hr.MKA=[data_hr.MKA; Ttempd];
                 data_hr.t=[data_hr.t; ttempd];
             else
                 warning('vectors have different lengths')
@@ -258,14 +378,14 @@ if pf
             end
             
             %note calibration signal
-            [checkcal,iflip]=max(abs(median(ntempd)-ntempd));
-            if checkcal/10^7>0.01
-                data_hr.iflip=[data_hr.iflip;length(data_hr.t)-length(ntempd)+(iflip-2:length(ntempd))'];
+            [checkcal,iflip]=max(abs(median(ytempd)-ytempd));
+            if checkcal>0.01
+                data_hr.iflip=[data_hr.iflip;length(data_hr.t)-length(Ttempd)+(iflip-2:length(Ttempd))'];
             end
         end
         t1=t1+1;
     end
     
-    save('../calibrations/Axial/axialdata_hr.mat','data_hr')
-    save('../calibrations/Axial/axialdata_min.mat','data_min')
+    save('../calibrations/PinonFlat/PFdata_hr.mat','data_hr')
+    save('../calibrations/PinonFlat/PFdata_min.mat','data_min')
 end

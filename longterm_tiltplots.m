@@ -5,20 +5,21 @@
 % temporal resolution. 
 %
 
-% clear; close all;
+clear; close all;
 
 %%%%%%%%%%CONFIG%%%%%%%%%%
 axial=false;
-pf=true;
+lily=true;
+pf=false;
 
-loaddata=false;
-tf=datenum(2020,01,10);
-
-sta='AXCC2';
-dec=[8 10 6 10 6];
+loaddata=true;
+tf=datenum(2020,01,10); % temp until odd calibrations figured out
 %%%%%%%%END CONFIG%%%%%%%%
 
 if axial
+    sta='AXCC2';
+    dec=[8 10 6 10 6];
+
     % Load pre-exisiting structure, if it exists
     if loaddata && exist('../calibrations/Axial/axialdata_hr.mat','file')
         load('../calibrations/Axial/axialdata_hr.mat')
@@ -151,6 +152,126 @@ if axial
     
     save('../calibrations/Axial/axialdata_hr.mat','data_hr')
     save('../calibrations/Axial/axialdata_min.mat','data_min')
+end
+
+if lily
+    sta='AXCC1';
+    
+    % Load pre-exisiting structure, if it exists
+    if loaddata && exist('../tiltcompare/SCTA_Lily_comp/AXCC1data_hr.mat','file')
+        load('../tiltcompare/SCTA_Lily_comp/AXCC1data_hr.mat')
+        load('../tiltcompare/SCTA_Lily_comp/AXCC1data_min.mat')
+        t0=ceil(lily_min.t(end));
+    else
+        t0=datenum(2018,10,13);
+    end
+    
+    if t0==datenum(2018,10,13)
+        lily_min.t=[];lily_min.LAX=[];lily_min.LAY=[];lily_min.BDO=[];
+        lily_hr.t=[];lily_hr.LAX=[];lily_hr.LAY=[];lily_hr.BDO=[];
+    end
+    
+    t1=t0;
+    while t1<tf
+        t1_s=datestr(t1,31); t1_s=t1_s(1:10);
+        LAY_string=[sta '_LAY_' t1_s '.miniseed'];
+        LAX_string=[sta '_LAX_' t1_s '.miniseed'];
+        BDO_string=[sta '_BDO_' t1_s '.miniseed'];
+        
+        %attempt download if file not found
+        if ~exist(['../tiltcompare/' sta '/' LAY_string],'file') || ...
+                ~exist(['../tiltcompare/' sta '/' LAX_string],'file') || ...
+                ~exist(['../tiltcompare/' sta '/' BDO_string],'file')
+            IRIS_data_pull(sta,'LAY','11',t1,t1+1);
+            IRIS_data_pull(sta,'LAX','11',t1,t1+1);
+            IRIS_data_pull(sta,'BDO','11',t1,t1+1);
+        end
+        %some dates have no data (power failure, etc.)
+        if exist(['../tiltcompare/' sta '/' LAY_string],'file') && ...
+                exist(['../tiltcompare/' sta '/' LAX_string],'file') && ...
+                exist(['../tiltcompare/' sta '/' BDO_string],'file')
+            
+            %LAY channel
+            temp=rdmseed(['../tiltcompare/' sta '/' LAY_string]);
+            ttemp=cat(1,temp.t);
+            ntemp=double(cat(1,temp.d));
+            %downsample to 1 sample/min
+            [ttempd,ntempd,~,~]=downsample_uneven5(ttemp,ntemp,1/(24*60));
+            
+            %LAX channel
+            temp=rdmseed(['../tiltcompare/' sta '/' LAX_string]);
+            ttemp=cat(1,temp.t);
+            etemp=double(cat(1,temp.d));
+            %downsample to 1 sample/min
+            [~,etempd,~,~]=downsample_uneven5(ttemp,etemp,1/(24*60));
+            
+            %BDO channel
+            temp=rdmseed(['../tiltcompare/' sta '/' BDO_string]);
+            ttemp=cat(1,temp.t);
+            ztemp=double(cat(1,temp.d));
+            %downsample to 1 sample/min
+            [ttest,ztempd,~,~]=downsample_uneven5(ttemp,ztemp,1/(24*60));
+
+            %append
+            if length(ttempd)==length(etempd) && length(ttempd)==length(ntempd) ...
+                    && length(ttempd)==length(ztempd)
+                lily_min.LAY=[lily_min.LAY; ntempd]; % [urad]
+                lily_min.LAX=[lily_min.LAX; etempd]; % [urad]
+                lily_min.BDO=[lily_min.BDO; ztempd/(1.45038e-4)]; % [Pa]
+                lily_min.t=[lily_min.t; ttempd];
+            else % auto-fix missing data at start or end
+                tilttime1=datetime(ttempd(1),'convertfrom','datenum');
+                prestime1=datetime(ttest(1),'convertfrom','datenum');
+                tilttime2=datetime(ttempd(end),'convertfrom','datenum');
+                prestime2=datetime(ttest(end),'convertfrom','datenum');
+                if length(ztempd)-length(etempd)==1
+                    ztempd(end)=[];
+                elseif tilttime1~=prestime1
+                    ldif=length(etempd)-length(ztempd);
+                    ztempd=[NaN(ldif,1);ztempd];
+                    ztempd(length(ttempd)+1:end)=[];
+                elseif tilttime2~=prestime2
+                    ldif=length(etempd)-length(ztempd);
+                    ztempd=[ztempd;NaN(ldif,1)];
+                    ztempd(length(ttempd)+1:end)=[];
+                end
+                % check if auto-fix worked
+                if length(ttempd)==length(etempd) && length(ttempd)==length(ntempd) ...
+                        && length(ttempd)==length(ztempd)
+                    lily_min.LAY=[lily_min.LAY; ntempd]; % [urad]
+                    lily_min.LAX=[lily_min.LAX; etempd]; % [urad]
+                    lily_min.BDO=[lily_min.BDO; ztempd/(1.45038e-4)]; % [Pa]
+                    lily_min.t=[lily_min.t; ttempd];
+                else % keyboard control for more complicated issues
+                    warning('vectors have different lengths')
+                    keyboard
+                end
+            end
+            
+            % hourly version
+            if length(ntempd)>620 %minimum length for decimation filter
+                %downsample all to a sample/hr
+                [~,ntempd,~,~]=downsample_uneven5(ttempd,ntempd,1/(24));
+                [~,etempd,~,~]=downsample_uneven5(ttempd,etempd,1/(24));
+                [ttempd,ztempd,~,~]=downsample_uneven5(ttempd,ztempd,1/(24));
+                %append
+                if length(ttempd)==length(etempd) && length(ttempd)==length(ntempd) ...
+                        && length(ttempd)==length(ztempd)
+                    lily_hr.LAY=[lily_hr.LAY; ntempd]; % [urad]
+                    lily_hr.LAX=[lily_hr.LAX; etempd]; % [urad]
+                    lily_hr.BDO=[lily_hr.BDO; ztempd/(1.45038e-4)]; % [Pa]
+                    lily_hr.t=[lily_hr.t; ttempd];
+                else
+                    warning('vectors have different lengths')
+                    keyboard
+                end
+            end
+        end
+        t1=t1+1;
+    end
+    
+    save('../tiltcompare/SCTA_Lily_comp/AXCC1data_hr.mat','lily_hr')
+    save('../tiltcompare/SCTA_Lily_comp/AXCC1data_min.mat','lily_min')
 end
 
 if pf
