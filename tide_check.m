@@ -252,7 +252,7 @@ fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
 print(['../tidal_comp/Axial/AXCC1_pressureVspotl_' svstr],'-dtiff','-r300')
 
-%% COMPARISON METRICS
+%% Spectral Plots
 % power spectra
 [SCTA.pxx,SCTA.fx]=pwelch(SCTA.LAX-mean(SCTA.LAX),60*24*30,30*24*30,2^16,1/60);
 [SCTA.pyy,SCTA.fy]=pwelch(SCTA.LAY-mean(SCTA.LAY),60*24*30,30*24*30,2^16,1/60);
@@ -288,7 +288,60 @@ fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
 print(['../tidal_comp/Axial/spectra_' svstr],'-dtiff','-r300')
 
-% cross correlations
+% phase angle
+SCTA.ftsx=fft(SCTA.LAX-mean(SCTA.LAX))/length(SCTA.LAX); % Normalised Fourier Transform
+SCTA.Fv=linspace(0, 1, fix(length(SCTA.LAX)/2)+1)*1/mean(diff(SCTA.t*24*60*60)); % Frequency Vector
+SCTA.amp_ftsx=abs(SCTA.ftsx(1:length(SCTA.Fv)))*2; % Spectrum Amplitude
+SCTA.phs_ftsx=angle(SCTA.ftsx(1:length(SCTA.Fv))); % Spectrum Phase
+SCTA.ftsy=fft(SCTA.LAY-mean(SCTA.LAY))/length(SCTA.LAY); % Normalised Fourier Transform
+SCTA.Fv=linspace(0, 1, fix(length(SCTA.LAY)/2)+1)*1/mean(diff(SCTA.t*24*60*60)); % Frequency Vector
+SCTA.amp_ftsy=abs(SCTA.ftsy(1:length(SCTA.Fv)))*2; % Spectrum Amplitude
+SCTA.phs_ftsy=angle(SCTA.ftsy(1:length(SCTA.Fv))); % Spectrum Phase
+
+AXCC1.ftsx=fft(AXCC1.LAX-mean(AXCC1.LAX))/length(AXCC1.LAX); % Normalised Fourier Transform
+AXCC1.Fv=linspace(0, 1, fix(length(AXCC1.LAX)/2)+1)*1/mean(diff(AXCC1.t*24*60*60)); % Frequency Vector
+AXCC1.amp_ftsx=abs(AXCC1.ftsx(1:length(AXCC1.Fv)))*2; % Spectrum Amplitude
+AXCC1.phs_ftsx=angle(AXCC1.ftsx(1:length(AXCC1.Fv))); % Spectrum Phase
+AXCC1.ftsy=fft(AXCC1.LAY-mean(AXCC1.LAY))/length(AXCC1.LAY); % Normalised Fourier Transform
+AXCC1.Fv=linspace(0, 1, fix(length(AXCC1.LAY)/2)+1)*1/mean(diff(AXCC1.t*24*60*60)); % Frequency Vector
+AXCC1.amp_ftsy=abs(AXCC1.ftsy(1:length(AXCC1.Fv)))*2; % Spectrum Amplitude
+AXCC1.phs_ftsy=angle(AXCC1.ftsy(1:length(AXCC1.Fv))); % Spectrum Phase
+
+AXCCsptl.ftsx=fft(AXCCsptl.LAX-mean(AXCCsptl.LAX))/length(AXCCsptl.LAX); % Normalised Fourier Transform
+AXCCsptl.Fv=linspace(0, 1, fix(length(AXCCsptl.LAX)/2)+1)*1/mean(diff(AXCCsptl.t*24*60*60)); % Frequency Vector
+AXCCsptl.amp_ftsx=abs(AXCCsptl.ftsx(1:length(AXCCsptl.Fv)))*2; % Spectrum Amplitude
+AXCCsptl.phs_ftsx=angle(AXCCsptl.ftsx(1:length(AXCCsptl.Fv))); % Spectrum Phase
+AXCCsptl.ftsy=fft(AXCCsptl.LAY-mean(AXCCsptl.LAY))/length(AXCCsptl.LAY); % Normalised Fourier Transform
+AXCCsptl.Fv=linspace(0, 1, fix(length(AXCCsptl.LAY)/2)+1)*1/mean(diff(AXCCsptl.t*24*60*60)); % Frequency Vector
+AXCCsptl.amp_ftsy=abs(AXCCsptl.ftsy(1:length(AXCCsptl.Fv)))*2; % Spectrum Amplitude
+AXCCsptl.phs_ftsy=angle(AXCCsptl.ftsy(1:length(AXCCsptl.Fv))); % Spectrum Phase
+
+figure
+subplot(211)
+semilogx(AXCC1.Fv,AXCC1.phs_ftsx,'linewidth',1)
+hold on
+semilogx(SCTA.Fv,SCTA.phs_ftsx,'linewidth',1)
+semilogx(AXCCsptl.Fv,AXCCsptl.phs_ftsx,'linewidth',1)
+ylabel('X Phase Angle (rad)')
+xlabel('Frequency (Hz)')
+legend('BOPT','SCTA','SPOTL','location','northeast')
+set(gca,'fontsize',14)
+subplot(212)
+semilogx(AXCC1.Fv,AXCC1.phs_ftsy,'linewidth',1)
+hold on
+semilogx(SCTA.Fv,SCTA.phs_ftsy,'linewidth',1)
+semilogx(AXCCsptl.Fv,AXCCsptl.phs_ftsy,'linewidth',1)
+ylabel('Y Phase Angle (rad)')
+xlabel('Frequency (Hz)')
+legend('BOPT','SCTA','SPOTL','location','northeast')
+set(gca,'fontsize',14)
+
+fh=gcf;
+fh.PaperUnits='inches';
+fh.PaperPosition=[0 0 11 8.5];
+print(['../tidal_comp/Axial/phase_' svstr],'-dtiff','-r300')
+
+%% Cross Correlations
 % resample model to 1 sample/minute
 xtemp1=interp1(AXCCsptl.t,AXCCsptl.LAX,AXCC1.t);
 ytemp1=interp1(AXCCsptl.t,AXCCsptl.LAY,AXCC1.t);
