@@ -15,7 +15,7 @@ tf=datenum(2019,12,01);
 
 t0_str=datestr(t0,30);
 tf_str=datestr(tf,30);
-svstr=[t0_str(1:8) '-' tf_str(7:8)];
+svstr=[t0_str(1:8) '-' tf_str(1:8)];
 
 %load data
 load('../calibrations/Axial/axialstitch_min_temp.mat','stitch_min')
@@ -86,33 +86,23 @@ for l=1%:length(bopt)
     eval([bopt{l} '.LAY=temp(2,:)'';']);
 end
 
-% ensure even sampling
-[~,SCTA.LAX,~,~]=downsample_uneven5(SCTA.t,SCTA.LAX,1/1440);
-[SCTA.t,SCTA.LAY,~,~]=downsample_uneven5(SCTA.t,SCTA.LAY,1/1440);
+% downsample to hourly, ensure even sampling
+[~,SCTA.LAX,~,~]=downsample_uneven5(SCTA.t,SCTA.LAX,1/24);
+[SCTA.t,SCTA.LAY,~,~]=downsample_uneven5(SCTA.t,SCTA.LAY,1/24);
 
-[~,AXCC1.LAX,~,~]=downsample_uneven5(AXCC1.t,AXCC1.LAX,1/1440);
-[AXCC1.t,AXCC1.LAY,~,~]=downsample_uneven5(AXCC1.t,AXCC1.LAY,1/1440);
+[~,AXCC1.BDO,~,~]=downsample_uneven5(AXCC1.t,AXCC1.BDO,1/24);
+[~,AXCC1.LAX,~,~]=downsample_uneven5(AXCC1.t,AXCC1.LAX,1/24);
+[AXCC1.t,AXCC1.LAY,~,~]=downsample_uneven5(AXCC1.t,AXCC1.LAY,1/24);
 
 % interpolate NaNs
-SCTA.LAX=fillgaps(SCTA.LAX,1440*7);
-SCTA.LAY=fillgaps(SCTA.LAY,1440*7);
+SCTA.LAX=fillgaps(SCTA.LAX,24*7);
+SCTA.LAY=fillgaps(SCTA.LAY,24*7);
 
-AXCC1.LAX=fillgaps(AXCC1.LAX,1440*7);
-AXCC1.LAY=fillgaps(AXCC1.LAY,1440*7);
+AXCC1.LAX=fillgaps(AXCC1.LAX,24*7);
+AXCC1.LAY=fillgaps(AXCC1.LAY,24*7);
 
-% 2 sample/day low pass filter
-[b,a]=butter(4,2*(1/60/60/12)/(1/60),'low');
-SCTA.LAX=filtfilt(b,a,SCTA.LAX);
-SCTA.LAY=filtfilt(b,a,SCTA.LAY);
-AXCC1.LAX=filtfilt(b,a,AXCC1.LAX);
-AXCC1.LAY=filtfilt(b,a,AXCC1.LAY);
-% AXEC2.LAX=filtfilt(b,a,AXEC2.LAX);
-% AXEC2.LAY=filtfilt(b,a,AXEC2.LAY);
-% AXID1.LAX=filtfilt(b,a,AXID1.LAX);
-% AXID1.LAY=filtfilt(b,a,AXID1.LAY);
-
-% 1 sample/day high pass filter
-[b,a]=butter(4,2*(1/60/60/24)/(1/60),'high');
+% bandpass 1-2 sample/day
+[b,a]=butter(4,[2*(1/60/60/12.5)/(1/3600) 2*(1/60/60/12.3711)/(1/3600)]);
 SCTA.LAX=filtfilt(b,a,SCTA.LAX);
 SCTA.LAY=filtfilt(b,a,SCTA.LAY);
 AXCC1.LAX=filtfilt(b,a,AXCC1.LAX);
@@ -140,17 +130,8 @@ AXECsptl.LAX=AXECsptl.LAX/10^3;
 AXIDsptl.LAY=AXIDsptl.LAY/10^3; % convert from nrad to urad
 AXIDsptl.LAX=AXIDsptl.LAX/10^3;
 
-% 2 sample/day low pass filter
-[b,a]=butter(4,2*(1/3600/12)/(1/3600),'low');
-AXCCsptl.LAX=filtfilt(b,a,AXCCsptl.LAX);
-AXCCsptl.LAY=filtfilt(b,a,AXCCsptl.LAY);
-AXECsptl.LAX=filtfilt(b,a,AXECsptl.LAX);
-AXECsptl.LAY=filtfilt(b,a,AXECsptl.LAY);
-AXIDsptl.LAX=filtfilt(b,a,AXIDsptl.LAX);
-AXIDsptl.LAY=filtfilt(b,a,AXIDsptl.LAY);
-
-% 1 sample/day high pass filter
-[b,a]=butter(4,2*(1/3600/24)/(1/3600),'high');
+% bandpass 1-2 sample/day
+[b,a]=butter(4,[2*(1/60/60/12.5)/(1/3600) 2*(1/60/60/12.3711)/(1/3600)]);
 AXCCsptl.LAX=filtfilt(b,a,AXCCsptl.LAX);
 AXCCsptl.LAY=filtfilt(b,a,AXCCsptl.LAY);
 AXECsptl.LAX=filtfilt(b,a,AXECsptl.LAX);
@@ -166,7 +147,8 @@ subplot(211)
 plot(AXCC1.t,detrend(AXCC1.LAX-mean(AXCC1.LAX)),'linewidth',1)
 hold on
 plot(SCTA.t,-detrend(SCTA.LAX-mean(SCTA.LAX)),'linewidth',1)
-plot(AXCCsptl.t,AXCCsptl.LAX*4,'k','linewidth',1)
+plot(AXCCsptl.t,AXCCsptl.LAX,'k','linewidth',1)
+xlim([0 30]+round(mean(t0,tf)))
 datetick('x','keeplimits')
 set(gca,'xticklabel',[])
 ylabel('x-tilt (\murad)')
@@ -176,7 +158,8 @@ subplot(212)
 plot(AXCC1.t,detrend(AXCC1.LAY-mean(AXCC1.LAY)),'linewidth',1)
 hold on
 plot(SCTA.t,-detrend(SCTA.LAY-mean(SCTA.LAY)),'linewidth',1)
-plot(AXCCsptl.t,AXCCsptl.LAY*4,'k','linewidth',1)
+plot(AXCCsptl.t,AXCCsptl.LAY,'k','linewidth',1)
+xlim([0 30]+round(mean(t0,tf)))
 datetick('x','keeplimits')
 ylabel('y-tilt (\murad)')
 legend('BOPT','SCTA','SPOTL','location','northeast')
@@ -238,10 +221,11 @@ print(['../tidal_comp/Axial/tilt_' svstr],'-dtiff','-r300')
 figure
 hold on
 yyaxis left
-plot(AXCC1.t,(AXCC1.BDO-mean(AXCC1.BDO))/10065)
+plot(AXCC1.t,(AXCC1.BDO-nanmean(AXCC1.BDO))/10065)
 ylabel('bopt pressure (m)')
 yyaxis right
 plot(th,h)
+xlim([0 30]+round(mean(t0,tf)))
 datetick('x','keeplimits')
 ylabel('spotl tidal amplitude (m)')
 title('central caldera')
@@ -254,30 +238,30 @@ print(['../tidal_comp/Axial/AXCC1_pressureVspotl_' svstr],'-dtiff','-r300')
 
 %% Spectral Plots
 % power spectra
-[SCTA.pxx,SCTA.fx]=pwelch(SCTA.LAX-mean(SCTA.LAX),60*24*30,30*24*30,2^16,1/60);
-[SCTA.pyy,SCTA.fy]=pwelch(SCTA.LAY-mean(SCTA.LAY),60*24*30,30*24*30,2^16,1/60);
+[SCTA.pxx,SCTA.fx]=pwelch(SCTA.LAX-mean(SCTA.LAX),24*30,12*10,2^16,1/3600);
+[SCTA.pyy,SCTA.fy]=pwelch(SCTA.LAY-mean(SCTA.LAY),24*30,12*10,2^16,1/3600);
 
-[AXCC1.pxx,AXCC1.fx]=pwelch(AXCC1.LAX-mean(AXCC1.LAX),60*24*30,30*24*30,2^16,1/60);
-[AXCC1.pyy,AXCC1.fy]=pwelch(AXCC1.LAY-mean(AXCC1.LAY),60*24*30,30*24*30,2^16,1/60);
+[AXCC1.pxx,AXCC1.fx]=pwelch(AXCC1.LAX-mean(AXCC1.LAX),24*30,12*10,2^16,1/3600);
+[AXCC1.pyy,AXCC1.fy]=pwelch(AXCC1.LAY-mean(AXCC1.LAY),24*30,12*10,2^16,1/3600);
 
 [AXCCsptl.pxx,AXCCsptl.fx]=pwelch(AXCCsptl.LAX-mean(AXCCsptl.LAX),24*30,12*10,2^16,1/3600);
 [AXCCsptl.pyy,AXCCsptl.fy]=pwelch(AXCCsptl.LAY-mean(AXCCsptl.LAY),24*30,12*10,2^16,1/3600);
 
 figure
 subplot(211)
-loglog(AXCC1.fx,AXCC1.pxx,'linewidth',1)
+loglog(AXCC1.fx*60*60*24,AXCC1.pxx,'linewidth',1)
 hold on
-loglog(SCTA.fx,SCTA.pxx,'linewidth',1)
-loglog(AXCCsptl.fx,AXCCsptl.pxx,'linewidth',1)
+loglog(SCTA.fx*60*60*24,SCTA.pxx,'linewidth',1)
+loglog(AXCCsptl.fx*60*60*24,AXCCsptl.pxx,'k','linewidth',1)
 ylabel('PSD (x)')
 xlabel('Frequency (Hz)')
 legend('BOPT','SCTA','SPOTL','location','northeast')
 set(gca,'fontsize',14)
 subplot(212)
-loglog(AXCC1.fy,AXCC1.pyy,'linewidth',1)
+loglog(AXCC1.fy*60*60*24,AXCC1.pyy,'linewidth',1)
 hold on
-loglog(SCTA.fy,SCTA.pyy,'linewidth',1)
-loglog(AXCCsptl.fy,AXCCsptl.pyy,'linewidth',1)
+loglog(SCTA.fy*60*60*24,SCTA.pyy,'linewidth',1)
+loglog(AXCCsptl.fy*60*60*24,AXCCsptl.pyy,'k','linewidth',1)
 ylabel('PSD (y)')
 xlabel('Frequency (Hz)')
 legend('BOPT','SCTA','SPOTL','location','northeast')
@@ -286,53 +270,60 @@ set(gca,'fontsize',14)
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
-print(['../tidal_comp/Axial/spectra_' svstr],'-dtiff','-r300')
+print(['../tidal_comp/Axial/PSD_' svstr],'-dtiff','-r300')
 
-% phase angle
-SCTA.ftsx=fft(SCTA.LAX-mean(SCTA.LAX))/length(SCTA.LAX); % Normalised Fourier Transform
-SCTA.Fv=linspace(0, 1, fix(length(SCTA.LAX)/2)+1)*1/mean(diff(SCTA.t*24*60*60)); % Frequency Vector
-SCTA.amp_ftsx=abs(SCTA.ftsx(1:length(SCTA.Fv)))*2; % Spectrum Amplitude
-SCTA.phs_ftsx=angle(SCTA.ftsx(1:length(SCTA.Fv))); % Spectrum Phase
-SCTA.ftsy=fft(SCTA.LAY-mean(SCTA.LAY))/length(SCTA.LAY); % Normalised Fourier Transform
-SCTA.Fv=linspace(0, 1, fix(length(SCTA.LAY)/2)+1)*1/mean(diff(SCTA.t*24*60*60)); % Frequency Vector
-SCTA.amp_ftsy=abs(SCTA.ftsy(1:length(SCTA.Fv)))*2; % Spectrum Amplitude
-SCTA.phs_ftsy=angle(SCTA.ftsy(1:length(SCTA.Fv))); % Spectrum Phase
+% phase amplitude and angle
+[SCTA.Fv,SCTA.amp_ftsx,SCTA.phs_ftsx]=amplitudespectrum(SCTA.t,SCTA.LAX-mean(SCTA.LAX));
+[SCTA.Fv,SCTA.amp_ftsy,SCTA.phs_ftsy]=amplitudespectrum(SCTA.t,SCTA.LAY-mean(SCTA.LAY));
 
-AXCC1.ftsx=fft(AXCC1.LAX-mean(AXCC1.LAX))/length(AXCC1.LAX); % Normalised Fourier Transform
-AXCC1.Fv=linspace(0, 1, fix(length(AXCC1.LAX)/2)+1)*1/mean(diff(AXCC1.t*24*60*60)); % Frequency Vector
-AXCC1.amp_ftsx=abs(AXCC1.ftsx(1:length(AXCC1.Fv)))*2; % Spectrum Amplitude
-AXCC1.phs_ftsx=angle(AXCC1.ftsx(1:length(AXCC1.Fv))); % Spectrum Phase
-AXCC1.ftsy=fft(AXCC1.LAY-mean(AXCC1.LAY))/length(AXCC1.LAY); % Normalised Fourier Transform
-AXCC1.Fv=linspace(0, 1, fix(length(AXCC1.LAY)/2)+1)*1/mean(diff(AXCC1.t*24*60*60)); % Frequency Vector
-AXCC1.amp_ftsy=abs(AXCC1.ftsy(1:length(AXCC1.Fv)))*2; % Spectrum Amplitude
-AXCC1.phs_ftsy=angle(AXCC1.ftsy(1:length(AXCC1.Fv))); % Spectrum Phase
+[AXCC1.Fv,AXCC1.amp_ftsx,AXCC1.phs_ftsx]=amplitudespectrum(AXCC1.t,AXCC1.LAX-mean(AXCC1.LAX));
+[AXCC1.Fv,AXCC1.amp_ftsy,AXCC1.phs_ftsy]=amplitudespectrum(AXCC1.t,AXCC1.LAY-mean(AXCC1.LAY));
 
-AXCCsptl.ftsx=fft(AXCCsptl.LAX-mean(AXCCsptl.LAX))/length(AXCCsptl.LAX); % Normalised Fourier Transform
-AXCCsptl.Fv=linspace(0, 1, fix(length(AXCCsptl.LAX)/2)+1)*1/mean(diff(AXCCsptl.t*24*60*60)); % Frequency Vector
-AXCCsptl.amp_ftsx=abs(AXCCsptl.ftsx(1:length(AXCCsptl.Fv)))*2; % Spectrum Amplitude
-AXCCsptl.phs_ftsx=angle(AXCCsptl.ftsx(1:length(AXCCsptl.Fv))); % Spectrum Phase
-AXCCsptl.ftsy=fft(AXCCsptl.LAY-mean(AXCCsptl.LAY))/length(AXCCsptl.LAY); % Normalised Fourier Transform
-AXCCsptl.Fv=linspace(0, 1, fix(length(AXCCsptl.LAY)/2)+1)*1/mean(diff(AXCCsptl.t*24*60*60)); % Frequency Vector
-AXCCsptl.amp_ftsy=abs(AXCCsptl.ftsy(1:length(AXCCsptl.Fv)))*2; % Spectrum Amplitude
-AXCCsptl.phs_ftsy=angle(AXCCsptl.ftsy(1:length(AXCCsptl.Fv))); % Spectrum Phase
+[AXCCsptl.Fv,AXCCsptl.amp_ftsx,AXCCsptl.phs_ftsx]=amplitudespectrum(AXCCsptl.t,AXCCsptl.LAX-mean(AXCCsptl.LAX));
+[AXCCsptl.Fv,AXCCsptl.amp_ftsy,AXCCsptl.phs_ftsy]=amplitudespectrum(AXCCsptl.t,AXCCsptl.LAY-mean(AXCCsptl.LAY));
+
+figure
+subplot(211)
+loglog(AXCC1.Fv,AXCC1.amp_ftsx,'linewidth',1)
+hold on
+loglog(SCTA.Fv,SCTA.amp_ftsx,'linewidth',1)
+loglog(AXCCsptl.Fv,AXCCsptl.amp_ftsx,'k','linewidth',1)
+ylabel('X FFT')
+xlabel('Frequency (1/day)')
+legend('BOPT','SCTA','SPOTL','location','northeast')
+set(gca,'fontsize',14)
+subplot(212)
+loglog(AXCC1.Fv,AXCC1.amp_ftsy,'linewidth',1)
+hold on
+loglog(SCTA.Fv,SCTA.amp_ftsy,'linewidth',1)
+loglog(AXCCsptl.Fv,AXCCsptl.amp_ftsy,'k','linewidth',1)
+ylabel('Y FFT')
+xlabel('Frequency (1/day)')
+legend('BOPT','SCTA','SPOTL','location','northeast')
+set(gca,'fontsize',14)
+
+fh=gcf;
+fh.PaperUnits='inches';
+fh.PaperPosition=[0 0 11 8.5];
+print(['../tidal_comp/Axial/fft_' svstr],'-dtiff','-r300')
 
 figure
 subplot(211)
 semilogx(AXCC1.Fv,AXCC1.phs_ftsx,'linewidth',1)
 hold on
 semilogx(SCTA.Fv,SCTA.phs_ftsx,'linewidth',1)
-semilogx(AXCCsptl.Fv,AXCCsptl.phs_ftsx,'linewidth',1)
+semilogx(AXCCsptl.Fv,AXCCsptl.phs_ftsx,'k','linewidth',1)
 ylabel('X Phase Angle (rad)')
-xlabel('Frequency (Hz)')
+xlabel('Frequency (1/day)')
 legend('BOPT','SCTA','SPOTL','location','northeast')
 set(gca,'fontsize',14)
 subplot(212)
 semilogx(AXCC1.Fv,AXCC1.phs_ftsy,'linewidth',1)
 hold on
 semilogx(SCTA.Fv,SCTA.phs_ftsy,'linewidth',1)
-semilogx(AXCCsptl.Fv,AXCCsptl.phs_ftsy,'linewidth',1)
+semilogx(AXCCsptl.Fv,AXCCsptl.phs_ftsy,'k','linewidth',1)
 ylabel('Y Phase Angle (rad)')
-xlabel('Frequency (Hz)')
+xlabel('Frequency (1/day)')
 legend('BOPT','SCTA','SPOTL','location','northeast')
 set(gca,'fontsize',14)
 
@@ -345,32 +336,34 @@ print(['../tidal_comp/Axial/phase_' svstr],'-dtiff','-r300')
 % resample model to 1 sample/minute
 xtemp1=interp1(AXCCsptl.t,AXCCsptl.LAX,AXCC1.t);
 ytemp1=interp1(AXCCsptl.t,AXCCsptl.LAY,AXCC1.t);
-[cross1x,lag1x]=xcorr(AXCC1.LAX,xtemp1,360,'normalized');
-[cross1y,lag1y]=xcorr(AXCC1.LAY,ytemp1,360,'normalized');
+[cross1x,lag1x]=xcorr(AXCC1.LAX,xtemp1,6,'normalized');
+[cross1y,lag1y]=xcorr(AXCC1.LAY,ytemp1,6,'normalized');
 
 xtemp2=interp1(AXCCsptl.t,AXCCsptl.LAX,SCTA.t);
 ytemp2=interp1(AXCCsptl.t,AXCCsptl.LAY,SCTA.t);
-[cross2x,lag2x]=xcorr(-SCTA.LAX,xtemp2,360,'normalized');
-[cross2y,lag2y]=xcorr(-SCTA.LAY,ytemp2,360,'normalized');
+[cross2x,lag2x]=xcorr(-SCTA.LAX,xtemp2,6,'normalized');
+[cross2y,lag2y]=xcorr(-SCTA.LAY,ytemp2,6,'normalized');
 
 figure
 subplot(211)
-plot(lag1x/60,cross1x,'linewidth',1)
+plot(lag1x,cross1x,'linewidth',1)
 hold on
-plot(lag2x/60,cross2x,'linewidth',1)
-text(3,0.1,num2str(round(max(abs(cross1x)),2)),'color','b','fontsize',12)
-text(3,-0.1,num2str(round(max(abs(cross2x)),2)),'color','r','fontsize',12)
+plot(lag2x,cross2x,'linewidth',1)
+text(0,-0.7,[num2str(round(cross1x(7),2)) ' @ 0 lag'],'color','b','fontsize',12)
+text(0,0.7,[num2str(round(cross2x(7),2)) ' @ 0 lag'],'color','r','fontsize',12)
+ylim([-1 1])
 ylabel('X')
 set(gca,'xticklabel',[])
 title('Cross Correlation Amplitudes')
 legend('BOPT','SCTA','location','northeast')
 set(gca,'fontsize',14)
 subplot(212)
-plot(lag1y/60,cross1y,'linewidth',1)
+plot(lag1y,cross1y,'linewidth',1)
 hold on
-plot(lag2y/60,cross2y,'linewidth',1)
-text(3,0.1,num2str(round(max(abs(cross1y)),2)),'color','b','fontsize',12)
-text(3,-0.1,num2str(round(max(abs(cross2y)),2)),'color','r','fontsize',12)
+plot(lag2y,cross2y,'linewidth',1)
+text(0,-0.5,[num2str(round(cross1y(7),2)) ' @ 0 lag'],'color','b','fontsize',12)
+text(0,0.5,[num2str(round(cross2y(7),2)) ' @ 0 lag'],'color','r','fontsize',12)
+ylim([-1 1])
 ylabel('Y')
 xlabel('Lags (hours)')
 legend('BOPT','SCTA','location','northeast')
