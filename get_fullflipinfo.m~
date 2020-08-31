@@ -32,11 +32,17 @@ flipInfoSome=[];
 dataDec1=[];
 dataDec100=[];
 
+% if exist('../calibrations/Axial/detailed_flipInfo.mat','file')
+%     load('../calibrations/Axial/detailed_flipInfo');
+%     [~,id,~]=unique(floor(flipInfoSome.t));
+%     daylist2=floor(flipInfoSome.t(id));
+%     daylist=setdiff(daylist,daylist2);
+% end
 if dataLoaded==1
     load ../calibrations/Axial/detailed_flipInfo
     
-    id2=find(floor(flipInfoAll.t)>floor(flipInfoSome.t(end)),1);
-    daylist=unique(floor(flipInfoAll.t(id2:5:end))); % all the new calibrations
+    [~,id2,~]=unique(floor(flipInfoAll.t(flipInfoAll.t>flipInfoSome.t(100))));
+    daylist2=floor(flipInfoAll.t(id2)); % all the new calibrations
 end
 
 for dayn = daylist'

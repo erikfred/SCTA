@@ -128,7 +128,10 @@ elseif dataLoaded==1
             
             fprintf(['No 40Hz data on ' datestr(dayn) '\n\n'])
             
-            if isempty(data.t) && dayn>=datenum(2019,08,13)
+            if dayn>datenum(2020,05,09) && dayn<=datenum(2020,06,01)
+                % datastream cut during this interval due to cable issues
+                continue
+            elseif isempty(data.t) && dayn>=datenum(2019,08,13)
                 data=[];
                 cha={'MNE','MNN','MNZ','MKA'};
                 chastr={'a(:,1)','a(:,2)','a(:,3)','T'};
@@ -230,7 +233,7 @@ plot([0 0]+xl(1)+diff(xl)/10,mean(yl)+[0 0.0001],'-k')
 text(xl(1)+diff(xl)/9,mean(yl)+0.00005,'10^{-5} g')
 legend('1st X','1st X (T Corrected)','Y','Y (T Corrected)','2nd X','2nd X (T Corrected)','-X','-X (T Corrected)',...
     '-Y','-Y (T Corrected)','X span','X span (T corrected)','Y span','Y span (T corrected)','location','northwest')
-datetick
+datetick('x',3)
 title({'Axial SCTA Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
 xtickangle(45)
 ylabel('Calibration, m/s^2')
