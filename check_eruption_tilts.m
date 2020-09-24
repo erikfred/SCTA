@@ -51,6 +51,10 @@ for m=1:length(eventnum)
                             t1=t1+1;
                             continue
                         end
+                        %detect automatic re-calibrations
+                        if any(dtemp>290) || any(dtemp<-290)
+                            keyboard
+                        end
                         dtempd=decimate(dtemp,dec(1,j),'fir');
                         dtempd=decimate(dtempd,dec(2,j),'fir');
                         dtempd=decimate(dtempd,dec(3,j),'fir');
@@ -87,21 +91,21 @@ for m=1:length(eventnum)
     end
     
     %tilt magnitudes, with compass rotation
-    AXCC1.x_mag=mean(AXCC1.LAX(end-9:end))-mean(AXCC1.LAX(1:10));
-    AXCC1.y_mag=mean(AXCC1.LAY(end-9:end))-mean(AXCC1.LAY(1:10));
     crd_rot=[cosd(CCMP(4).plus_y) sind(CCMP(4).plus_y); -sind(CCMP(4).plus_y) cosd(CCMP(4).plus_y)];
-    temp3=crd_rot*[AXCC1.x_mag;AXCC1.y_mag]; AXCC1.x_rot=temp3(1); AXCC1.y_rot=temp3(2);
+    temp3=crd_rot*[AXCC1.LAX';AXCC1.LAY']; AXCC1.x_rot=temp3(1,:)'; AXCC1.y_rot=temp3(2,:)';
+    AXCC1.x_mag=mean(AXCC1.x_rot(end-9:end))-mean(AXCC1.x_rot(1:10));
+    AXCC1.y_mag=mean(AXCC1.y_rot(end-9:end))-mean(AXCC1.y_rot(1:10));
     
-    AXEC2.x_mag=mean(AXEC2.LAX(end-9:end))-mean(AXEC2.LAX(1:10));
-    AXEC2.y_mag=mean(AXEC2.LAY(end-9:end))-mean(AXEC2.LAY(1:10));
     crd_rot=[cosd(CCMP(3).plus_y) sind(CCMP(3).plus_y); -sind(CCMP(3).plus_y) cosd(CCMP(3).plus_y)];
-    temp3=crd_rot*[AXEC2.x_mag;AXEC2.y_mag]; AXEC2.x_rot=temp3(1); AXEC2.y_rot=temp3(2);
+    temp3=crd_rot*[AXEC2.LAX';AXEC2.LAY']; AXEC2.x_rot=temp3(1,:)'; AXEC2.y_rot=temp3(2,:)';
+    AXEC2.x_mag=mean(AXEC2.x_rot(end-9:end))-mean(AXEC2.x_rot(1:10));
+    AXEC2.y_mag=mean(AXEC2.y_rot(end-9:end))-mean(AXEC2.y_rot(1:10));
     
     if m~=2
-        AXID1.x_mag=mean(AXID1.LAX(end-9:end))-mean(AXID1.LAX(1:10));
-        AXID1.y_mag=mean(AXID1.LAY(end-9:end))-mean(AXID1.LAY(1:10));
         crd_rot=[cosd(CCMP(2).plus_y) sind(CCMP(2).plus_y); -sind(CCMP(2).plus_y) cosd(CCMP(2).plus_y)];
-        temp3=crd_rot*[AXID1.x_mag;AXID1.y_mag]; AXID1.x_rot=temp3(1); AXID1.y_rot=temp3(2);
+        temp3=crd_rot*[AXID1.LAX';AXID1.LAY']; AXID1.x_rot=temp3(1,:)'; AXID1.y_rot=temp3(2,:)';
+        AXID1.x_mag=mean(AXID1.x_rot(end-9:end))-mean(AXID1.x_rot(1:10));
+        AXID1.y_mag=mean(AXID1.y_rot(end-9:end))-mean(AXID1.y_rot(1:10));
     end
     
     %prep for plots
@@ -121,10 +125,10 @@ for m=1:length(eventnum)
     plot(AXCC1.x,AXCC1.y,'k^','markersize',15,'linewidth',2)
     plot(AXID1.x,AXID1.y,'k^','markersize',15,'linewidth',2)
     plot(AXEC2.x,AXEC2.y,'k^','markersize',15,'linewidth',2)
-    quiver(AXCC1.x,AXCC1.y,AXCC1.x_rot/400,AXCC1.y_rot/400,'b','linewidth',2)
-    quiver(AXEC2.x,AXEC2.y,AXEC2.x_rot/400,AXEC2.y_rot/400,'b','linewidth',2)
+    quiver(AXCC1.x,AXCC1.y,AXCC1.x_mag/400,AXCC1.y_mag/400,'b','linewidth',2)
+    quiver(AXEC2.x,AXEC2.y,AXEC2.x_mag/400,AXEC2.y_mag/400,'b','linewidth',2)
     if m~=2
-        quiver(AXID1.x,AXID1.y,AXID1.x_rot/400,AXID1.y_rot/400,'b','linewidth',2)
+        quiver(AXID1.x,AXID1.y,AXID1.x_mag/400,AXID1.y_mag/400,'b','linewidth',2)
     end
     quiver(-4,-3,1000/400,0,'r','linewidth',2)
     axis equal
@@ -142,29 +146,34 @@ for m=1:length(eventnum)
     figure(23)
     clf
     subplot(311)
-    plot(AXCC1.time,AXCC1.LAX-nanmean(AXCC1.LAX),'linewidth',1)
+    plot(AXCC1.time,AXCC1.x_rot-nanmean(AXCC1.x_rot),'linewidth',1)
     hold on
-    plot(AXCC1.time,AXCC1.LAY-nanmean(AXCC1.LAY),'linewidth',1)
+    plot(AXCC1.time,AXCC1.y_rot-nanmean(AXCC1.y_rot),'linewidth',1)
     legend('x','y','location','southeast')
+    xlim([strts(m) enders(m)])
     datetick('x','keeplimits')
     set(gca,'xticklabel',[])
     set(gca,'fontsize',18)
     title('Central Caldera','fontsize',20)
     subplot(312)
-    plot(AXEC2.time,AXEC2.LAX-nanmean(AXEC2.LAX),'linewidth',1)
+    plot(AXEC2.time,AXEC2.x_rot-nanmean(AXEC2.x_rot),'linewidth',1)
     hold on
-    plot(AXEC2.time,AXEC2.LAY-nanmean(AXEC2.LAY),'linewidth',1)
+    plot(AXEC2.time,AXEC2.y_rot-nanmean(AXEC2.y_rot),'linewidth',1)
     legend('x','y','location','southeast')
+    xlim([strts(m) enders(m)])
     datetick('x','keeplimits')
     set(gca,'xticklabel',[])
     set(gca,'fontsize',18)
     ylabel('tilt (\murad)')
     title('Eastern Caldera','fontsize',20)
     subplot(313)
-    plot(AXID1.time,AXID1.LAX-nanmean(AXID1.LAX),'linewidth',1)
-    hold on
-    plot(AXID1.time,AXID1.LAY-nanmean(AXID1.LAY),'linewidth',1)
+    if m~=2
+        plot(AXID1.time,AXID1.x_rot-nanmean(AXID1.x_rot),'linewidth',1)
+        hold on
+        plot(AXID1.time,AXID1.y_rot-nanmean(AXID1.y_rot),'linewidth',1)
+    end
     legend('x','y','location','southeast')
+    xlim([strts(m) enders(m)])
     datetick('x','keeplimits')
     set(gca,'fontsize',18)
     title('International District','fontsize',20)

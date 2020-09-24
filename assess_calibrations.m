@@ -9,7 +9,7 @@ load('../calibrations/Axial/axialdata','flipInfoAll');
 
 [~,id,~]=unique(floor(flipInfoAll.t));
 daylist=floor(flipInfoAll.t(id));
-daylist=daylist(end-11:end);
+daylist=daylist([31,32]);
 
 for i=1:length(daylist)
     dayn=daylist(i);

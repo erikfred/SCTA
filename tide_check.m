@@ -22,7 +22,7 @@ load('../calibrations/Axial/axialstitch_min_temp.mat','stitch_min')
 load('../tiltcompare/SCTA_Lily_comp/AXCC1data_min.mat','lily_min')
 
 load('../compass_directions.mat')
-CCMP=CCMP([4 3 2 1]);
+CCMP=CCMP([4 3 2 1 5]);
 
 bopt={'AXCC1','AXEC2','AXID1'};
 
@@ -86,6 +86,12 @@ for l=1%:length(bopt)
     eval([bopt{l} '.LAY=temp(2,:)'';']);
 end
 
+% SCTA orientation correction
+crd_rot=[cosd(CCMP(5).plus_y) sind(CCMP(5).plus_y); -sind(CCMP(5).plus_y) cosd(CCMP(5).plus_y)];
+temp=crd_rot*[SCTA.LAX';SCTA.LAY'];
+SCTA.LAX=temp(1,:)';
+SCTA.LAY=temp(2,:)';
+
 % downsample to hourly, ensure even sampling
 [~,SCTA.LAX,~,~]=downsample_uneven5(SCTA.t,SCTA.LAX,1/24);
 [SCTA.t,SCTA.LAY,~,~]=downsample_uneven5(SCTA.t,SCTA.LAY,1/24);
@@ -146,7 +152,7 @@ figure
 subplot(211)
 plot(AXCC1.t,detrend(AXCC1.LAX-mean(AXCC1.LAX)),'linewidth',1)
 hold on
-plot(SCTA.t,-detrend(SCTA.LAX-mean(SCTA.LAX)),'linewidth',1)
+plot(SCTA.t,detrend(SCTA.LAX-mean(SCTA.LAX)),'linewidth',1)
 plot(AXCCsptl.t,AXCCsptl.LAX,'k','linewidth',1)
 xlim([0 30]+round(mean(t0,tf)))
 datetick('x','keeplimits')
@@ -157,7 +163,7 @@ legend('BOPT','SCTA','SPOTL','location','northeast')
 subplot(212)
 plot(AXCC1.t,detrend(AXCC1.LAY-mean(AXCC1.LAY)),'linewidth',1)
 hold on
-plot(SCTA.t,-detrend(SCTA.LAY-mean(SCTA.LAY)),'linewidth',1)
+plot(SCTA.t,detrend(SCTA.LAY-mean(SCTA.LAY)),'linewidth',1)
 plot(AXCCsptl.t,AXCCsptl.LAY,'k','linewidth',1)
 xlim([0 30]+round(mean(t0,tf)))
 datetick('x','keeplimits')

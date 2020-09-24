@@ -220,7 +220,7 @@ else
         end
     else
         cmap=cmocean('deep'); % smoothly-varying color scheme to indicate time
-        cmap=cmap(51:end-50,:); % take off first and last ~20% for better visibility
+        cmap=cmap(51:end-50); % take off first and last 
         for i=1:length(daylist)
             dayn=daylist(i);
             if sum(ubads==dayn) % skip the bad cals for now

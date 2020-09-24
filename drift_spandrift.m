@@ -12,25 +12,40 @@ apply_T_cor=false;
 %% Axial
 if Axial
     load('../calibrations/Axial/detailed_flipInfo');
+    load('../calibrations/Axial/axialdata','flipInfoAll');
     
     % identify bad calibrations
-    bad_x1=[datenum(2019,12,01) datenum(2020,01,08) datenum(2020,01,15) datenum(2020,01,22) datenum(2020,01,29)];
-    bad_y=[datenum(2019,12,01) datenum(2020,01,08)];
-    bad_negy=[datenum(2019,12,01) datenum(2020,01,08) datenum(2020,01,15) datenum(2020,01,22) datenum(2020,02,19) datenum(2020,03,18)];
-    bad_x2=[datenum(2019,12,01) datenum(2020,01,08) datenum(2020,01,15) datenum(2020,01,22) datenum(2020,04,29)];
-    bad_negx=[datenum(2019,10,15) datenum(2019,11,01) datenum(2019,12,01) datenum(2020,01,08) datenum(2020,01,22)];
-    bads=cat(2,bad_x1,bad_y,bad_negy,bad_x2,bad_negx); bads=unique(bads);
+    bad_x1=[datenum(2019,12,01) datenum(2020,01,08) datenum(2020,01,15) datenum(2020,01,22) datenum(2020,01,29) ...
+        datenum(2020,09,09)];
+    bad_y=[datenum(2019,12,01) datenum(2020,01,08) datenum(2020,06,03)];
+    bad_negy=[datenum(2019,12,01) datenum(2020,01,08) datenum(2020,01,15) datenum(2020,01,22) datenum(2020,02,19) ...
+        datenum(2020,03,18) datenum(2020,06,03) datenum(2020,06,17) datenum(2020,09,09)];
+    bad_x2=[datenum(2019,12,01) datenum(2020,01,08) datenum(2020,01,15) datenum(2020,04,29) ...
+        datenum(2020,09,02)];
+    bad_negx=[datenum(2019,11,01) datenum(2019,12,01) datenum(2020,09,02)];
+    bads={bad_x1, bad_y, bad_negy, bad_x2, bad_negx};
+    ubads=cat(2,bad_x1,bad_y,bad_negy,bad_x2,bad_negx); ubads=unique(ubads);
+    save('../calibrations/Axial/badcaldates','bad_x1','bad_x2','bad_negx','bad_y','bad_negy','bads','ubads')
     
     % find linear best fits (and drifts) to only good calibrations
-    [~,ix1]=setdiff(floor(flipInfoSome.t),bad_x1);
-    px1=polyfit(flipInfoSome.t(ix1)-flipInfoSome.t(ix1(1)),flipInfoSome.gCalTCor(ix1),1);
+    x1_t=[floor(flipInfoAll.t(1:3:73));floor(flipInfoSome.t(1:5:end))];
+    x1=[flipInfoAll.gCalTCor(1:3:73);flipInfoSome.gCalTCor(1:5:end)];
+    [~,ix1]=setdiff(x1_t,bad_x1);
+    % all cals
+    px1=polyfit(x1_t(ix1)-x1_t(ix1(1)),x1(ix1),1);
     x1drift=px1(1)*365;
-    x1_m=px1(1)*(flipInfoSome.t(1:5:end)-flipInfoSome.t(1))+px1(2);
+    x1_m=px1(1)*(x1_t-x1_t(1))+px1(2);
+    % only cals under +/- flipping scheme
+    px1=polyfit(x1_t(ix1)-x1_t(ix1(1)),x1(ix1),1);
+    x1drift=px1(1)*365;
+    x1_m=px1(1)*(x1_t-x1_t(1))+px1(2);
     
-    [~,iy]=setdiff(floor(flipInfoSome.t),bad_y); iy=iy+1;
-    py=polyfit(flipInfoSome.t(iy)-flipInfoSome.t(iy(1)),flipInfoSome.gCalTCor(iy),1);
+    y_t=[floor(flipInfoAll.t(2:3:74));floor(flipInfoSome.t(2:5:end))];
+    y=[flipInfoAll.gCalTCor(2:3:74);flipInfoSome.gCalTCor(2:5:end)];
+    [~,iy]=setdiff(y_t,bad_y);
+    py=polyfit(y_t(iy)-y_t(iy(1)),y(iy),1);
     ydrift=py(1)*365;
-    y_m=py(1)*(flipInfoSome.t(2:5:end)-flipInfoSome.t(2))+py(2);
+    y_m=py(1)*(y_t-y_t(1))+py(2);
     
     [~,inegy]=setdiff(floor(flipInfoSome.t),bad_negy); inegy=inegy+2;
     pnegy=polyfit(flipInfoSome.t(inegy)-flipInfoSome.t(inegy(1)),flipInfoSome.gCalTCor(inegy),1);
@@ -69,21 +84,21 @@ if Axial
     figure(50)
     clf
     hold on
-    plot(flipInfoSome.t(1:5:end),flipInfoSome.gCalTCor(1:5:end)-mean(x1_m),'+r','markersize',18,'linewidth',2);
-    h1=plot(flipInfoSome.t(ix1),flipInfoSome.gCalTCor(ix1)-mean(x1_m),'+k','markersize',18,'linewidth',2);
+    plot(x1_t,x1-mean(x1_m),'+r','markersize',18,'linewidth',2);
+    h1=plot(x1_t(ix1),x1(ix1)-mean(x1_m),'+k','markersize',18,'linewidth',2);
     plot(flipInfoSome.t(5:5:end),flipInfoSome.gCalTCor(5:5:end)-mean(negx_m),'xr','markersize',18,'linewidth',2);
     h2=plot(flipInfoSome.t(inegx),flipInfoSome.gCalTCor(inegx)-mean(negx_m),'xk','markersize',18,'linewidth',2);
     h3=plot(flipInfoSome.t(ixs1),(flipInfoSome.gCalTCor(ixs1)+flipInfoSome.gCalTCor(ixs1+4))/2 ...
         -mean(xs1_m),'^k','markerfacecolor','k','markersize',18);
-    plot(flipInfoSome.t(1:5:end),x1_m-mean(x1_m),'--k')
+    plot(x1_t,x1_m-mean(x1_m),'--k')
     plot(flipInfoSome.t(5:5:end),negx_m-mean(negx_m),'--k')
     plot(flipInfoSome.t(1:5:end),xs1_m-mean(xs1_m),'k','linewidth',1)
     text(flipInfoSome.t(end)-40,x1_m(end)-mean(x1_m)+10^-5,[num2str(round(x1drift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,negx_m(end)-mean(negx_m)-10^-5,[num2str(round(negxdrift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,xs1_m(end)-mean(xs1_m)+10^-5,[num2str(round(xspandrift1*10^5,2)) ' \mug/yr'],'fontsize',14)
     legend([h1,h2,h3],'+X calibration','-X calibration','X span','location','northwest')
-    datetick
-    title({'Axial SCTA X Calibrations',[datestr(flipInfoSome.t(1),'mmm dd, yyyy') ...
+    datetick('x',6)
+    title({'Axial SCTA X Calibrations',[datestr(x1_t(1),'mmm dd, yyyy') ...
         ' - ' datestr(flipInfoSome.t(end),'mmm dd, yyyy')]})
     ylabel('Acceleration (m/s^2)')
     set(gca,'fontsize',18)
@@ -113,7 +128,7 @@ if Axial
     text(flipInfoSome.t(end)-40,negx_m(end)-mean(negx_m)-10^-5,[num2str(round(negxdrift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,xs2_m(end)-mean(xs2_m)+10^-5,[num2str(round(xspandrift2*10^5,2)) ' \mug/yr'],'fontsize',14)
     legend([h1,h2,h3],'+X calibration','-X calibration','X span','location','northwest')
-    datetick
+    datetick('x',6)
     title({'Axial SCTA X Calibrations',[datestr(flipInfoSome.t(1),'mmm dd, yyyy') ...
         ' - ' datestr(flipInfoSome.t(end),'mmm dd, yyyy')]})
     ylabel('Acceleration (m/s^2)')
@@ -131,21 +146,21 @@ if Axial
     figure(52)
     clf
     hold on
-    plot(flipInfoSome.t(2:5:end),flipInfoSome.gCalTCor(2:5:end)-mean(y_m),'+r','markersize',18,'linewidth',2);
-    h1=plot(flipInfoSome.t(iy),flipInfoSome.gCalTCor(iy)-mean(y_m),'+k','markersize',18,'linewidth',2);
+    plot(y_t,y-mean(y_m),'+r','markersize',18,'linewidth',2);
+    h1=plot(y_t(iy),y(iy)-mean(y_m),'+k','markersize',18,'linewidth',2);
     plot(flipInfoSome.t(3:5:end),flipInfoSome.gCalTCor(3:5:end)-mean(negy_m),'xr','markersize',18,'linewidth',2);
     h2=plot(flipInfoSome.t(inegy),flipInfoSome.gCalTCor(inegy)-mean(negy_m),'xk','markersize',18,'linewidth',2);
     h3=plot(flipInfoSome.t(iys),(flipInfoSome.gCalTCor(iys)+flipInfoSome.gCalTCor(iys+1))/2 ...
         -mean(ys_m),'^k','markerfacecolor','k','markersize',18);
-    plot(flipInfoSome.t(2:5:end),y_m-mean(y_m),'--k')
+    plot(y_t,y_m-mean(y_m),'--k')
     plot(flipInfoSome.t(3:5:end),negy_m-mean(negy_m),'--k')
     plot(flipInfoSome.t(2:5:end),ys_m-mean(ys_m),'k','linewidth',1)
     text(flipInfoSome.t(end)-40,y_m(end)-mean(y_m)+10^-5,[num2str(round(ydrift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,negy_m(end)-mean(negy_m)-10^-5,[num2str(round(negydrift*10^5,2)) ' \mug/yr'],'fontsize',14)
     text(flipInfoSome.t(end)-40,ys_m(end)-mean(ys_m)+10^-5,[num2str(round(yspandrift*10^5,2)) ' \mug/yr'],'fontsize',14)
     legend([h1,h2,h3],'+Y calibration','-Y calibration','Y span','location','northwest')
-    datetick
-    title({'Axial SCTA Y Calibrations',[datestr(flipInfoSome.t(1),'mmm dd, yyyy') ...
+    datetick('x',6)
+    title({'Axial SCTA Y Calibrations',[datestr(y_t(1),'mmm dd, yyyy') ...
         ' - ' datestr(flipInfoSome.t(end),'mmm dd, yyyy')]})
     ylabel('Acceleration (m/s^2)')
     set(gca,'fontsize',18)

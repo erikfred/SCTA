@@ -8,12 +8,12 @@
 clear; close all;
 
 %%%%%%%%%%CONFIG%%%%%%%%%%
-axial=false;
+axial=true;
 lily=true;
 pf=false;
 
 loaddata=true;
-tf=datenum(2020,01,10); % temp until odd calibrations figured out
+tf=floor(now);
 %%%%%%%%END CONFIG%%%%%%%%
 
 if axial
@@ -42,6 +42,11 @@ if axial
     
     t1=t0;
     while t1<tf
+        if t1>datenum(2020,05,09) && t1<datenum(2020,06,02) %OOI outage
+            t1=t1+1;
+            continue
+        end
+        
         t1_s=datestr(t1,31); t1_s=t1_s(1:10);
         MNN_string=[sta '_MNN_' t1_s '.miniseed'];
         MNE_string=[sta '_MNE_' t1_s '.miniseed'];
@@ -173,6 +178,11 @@ if lily
     
     t1=t0;
     while t1<tf
+        if t1>datenum(2020,05,09) && t1<datenum(2020,06,02) %OOI outage
+            t1=t1+1;
+            continue
+        end
+        
         t1_s=datestr(t1,31); t1_s=t1_s(1:10);
         LAY_string=[sta '_LAY_' t1_s '.miniseed'];
         LAX_string=[sta '_LAX_' t1_s '.miniseed'];
