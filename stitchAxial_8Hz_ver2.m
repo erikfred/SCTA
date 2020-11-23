@@ -14,17 +14,34 @@ clear; close all
 
 comptilts=true;
 
-load('../calibrations/Axial/axialdata.mat','flipInfoAll')
-load('../calibrations/Axial/axialdata_hr.mat')
-load('../calibrations/Axial/axialdata_min.mat')
+era=2; % 1 - pre-move era, 2 - post-move era
+
+if era==1
+    flipfile='../calibrations/Axial/axialdata.mat';
+    datafile_hr='../calibrations/Axial/axialdata_hr.mat';
+    datafile_min='../calibrations/Axial/axialdata_min.mat';
+    savefile_hr='../calibrations/Axial/axialstitch_hr.mat';
+    savefile_min='../calibrations/Axial/axialstitch_min.mat';
+elseif era==2
+    flipfile='../calibrations/Axial/axialdata_newloc.mat';
+    datafile_hr='../calibrations/Axial/axialdata_newloc_hr.mat';
+    datafile_min='../calibrations/Axial/axialdata_newloc_min.mat';
+    savefile_hr='../calibrations/Axial/axialstitch_newloc_hr.mat';
+    savefile_min='../calibrations/Axial/axialstitch_newloc_min.mat';
+else
+    error('specify era!')
+end
+
+load(flipfile,'flipInfoAll')
+load(datafile_hr)
+load(datafile_min)
 load('../compass_directions.mat')
 load('../calibrations/Axial/badcaldates','bad_x1','bad_x2','bad_negx','bad_y','bad_negy','bads')
 
 % pick up data structure from previous run, or start from scratch
-if exist('../calibrations/Axial/axialstitch_hr.mat','file') && ...
-        exist('../calibrations/Axial/axialstitch_min.mat','file')
-    load('../calibrations/Axial/axialstitch_hr.mat')
-    load('../calibrations/Axial/axialstitch_min.mat')
+if exist(savefile_hr,'file') && exist(savefile_min,'file')
+    load(savefile_hr)
+    load(savefile_min)
     
     i0=length(stitch_hr)+1;
     
@@ -92,12 +109,16 @@ for i=1:length(flipstart_min)
         ydrift=(cal2(i).y_plus-cal2(i-1).y_plus)/(flipdate_min(i)-flipdate_min(i-1))/24/60; %per minute
     end
     
+%     % uncomment to disable drift correction
+%     xdrift=0;
+%     ydrift=0;
+    
     disp(['X drift rate = ' num2str(xdrift*60*24*365*10^5) ' \mug/yr'])
     disp(['Y drift rate = ' num2str(ydrift*60*24*365*10^5) ' \mug/yr'])
     
-    if i>13
-        keyboard
-    end
+%     if i>13
+%         keyboard
+%     end
     
     elin=linspace(0,xdrift*length(eint),length(eint))';
     nlin=linspace(0,ydrift*length(nint),length(nint))';
@@ -212,9 +233,15 @@ stitch_min.MNN(flipstart_min(i)+120:end)=stitch_min.MNN(flipstart_min(i)+120:end
 % end
 
 % rotate channels into east and north
-crd_rot=[cosd(CCMP(5).plus_y) sind(CCMP(5).plus_y); -sind(CCMP(5).plus_y) cosd(CCMP(5).plus_y)];
+if era==1
+    crd_rot=[cosd(CCMP(5).plus_y) sind(CCMP(5).plus_y); -sind(CCMP(5).plus_y) cosd(CCMP(5).plus_y)];
+elseif era==2
+    crd_rot=[cosd(CCMP(6).plus_y) sind(CCMP(6).plus_y); -sind(CCMP(6).plus_y) cosd(CCMP(6).plus_y)];
+else
+    error('specify era!')
+end
 temp=crd_rot*[stitch_min.MNE';stitch_min.MNN']; stitch_min.MNE_rot=temp(1,:)'; stitch_min.MNN_rot=temp(2,:)';
-temp=crd_rot*[stitch_hr.MNE';stitch_hr.MNN']; stitch_hr.MNE_rot=temp(1,:)'; stitch_hr.MNN_rot=temp(2,:)';
+    temp=crd_rot*[stitch_hr.MNE';stitch_hr.MNN']; stitch_hr.MNE_rot=temp(1,:)'; stitch_hr.MNN_rot=temp(2,:)';
 
 %convert accel to tilt in microrad, start from zero
 stitch_min.LAX=asin(stitch_min.MNE_rot/9.81)*10^6;stitch_min.LAX=stitch_min.LAX-stitch_min.LAX(1);
@@ -235,6 +262,22 @@ if comptilts
         warning('Could not find LILY data')
     end
     
+    if era==1
+        cond=lily_min.t<datenum(2020,09,11);
+        lily_min.t=lily_min.t(cond);
+        lily_min.LAX=lily_min.LAX(cond);
+        lily_min.LAY=lily_min.LAY(cond);
+        lily_min.BDO=lily_min.BDO(cond);
+    elseif era==2
+        cond=lily_min.t>datenum(2020,09,11,12,0,0);
+        lily_min.t=lily_min.t(cond);
+        lily_min.LAX=lily_min.LAX(cond);
+        lily_min.LAY=lily_min.LAY(cond);
+        lily_min.BDO=lily_min.BDO(cond);
+    else
+        error('specify era!')
+    end
+    
     %AXCC1 compass correction
     crd_rot=[cosd(CCMP(4).plus_y) sind(CCMP(4).plus_y); -sind(CCMP(4).plus_y) cosd(CCMP(4).plus_y)];
     temp=crd_rot*[lily_min.LAX';lily_min.LAY']; lily_min.LAX_rot=temp(1,:)'; lily_min.LAY_rot=temp(2,:)';
@@ -249,7 +292,7 @@ if comptilts
     plot(lily_min.t,lily_min.LAX_rot,'b','linewidth',1)
     plot(flipdate_min,-stitch_min.LAX(flipstart_min-5),'+r','markersize',5,'linewidth',2)
     legend('SCTA','LILY','location','northwest')
-    title(['East Tilt ' datestr(floor(flipdate_min(1))) ' to ' datestr(floor(flipdate_min(end)))])
+    title(['East Tilt ' datestr(floor(stitch_min.t(1))) ' to ' datestr(floor(stitch_min.t(end)))])
     ylabel('Tilt (\murad)')
     datetick('x',6)
     set(gca,'fontsize',14)
@@ -261,7 +304,7 @@ if comptilts
     plot(lily_min.t,lily_min.LAY_rot,'b','linewidth',1)
     plot(flipdate_min,-stitch_min.LAY(flipstart_min-5),'+r','markersize',5,'linewidth',2)
     legend('SCTA','LILY','location','northwest')
-    title(['North Tilt ' datestr(floor(flipdate_min(1))) ' to ' datestr(floor(flipdate_min(end)))])
+    title(['North Tilt ' datestr(floor(stitch_min.t(1))) ' to ' datestr(floor(stitch_min.t(1)))])
     ylabel('Tilt (\murad)')
     datetick('x',6)
     set(gca,'fontsize',14)

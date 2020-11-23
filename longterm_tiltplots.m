@@ -8,32 +8,44 @@
 clear; close all;
 
 %%%%%%%%%%CONFIG%%%%%%%%%%
-axial=true;
+axial=false;
 lily=true;
 pf=false;
 
-loaddata=true;
+loaddata=1; %0 - start from scratch, 1 - load from pre-move era, 2 - load from post-move era
+flipfile='../calibrations/Axial/axialdata_newloc.mat'; % only used if loaddata==0
+startdate=datenum(2020,09,11); % datenum(2018,10,13) [only used if loaddata==0]
 tf=floor(now);
 %%%%%%%%END CONFIG%%%%%%%%
+
+if loaddata==1
+    flipfile='../calibrations/Axial/axialdata.mat';
+    datafile_hr='../calibrations/Axial/axialdata_hr.mat';
+    datafile_min='../calibrations/Axial/axialdata_min.mat';
+elseif loaddata==2
+    flipfile='../calibrations/Axial/axialdata_newloc.mat';
+    datafile_hr='../calibrations/Axial/axialdata_newloc_hr.mat';
+    datafile_min='../calibrations/Axial/axialdata_newloc_min.mat';
+end
 
 if axial
     sta='AXCC2';
     dec=[8 10 6 10 6];
 
     % Load pre-exisiting structure, if it exists
-    if loaddata && exist('../calibrations/Axial/axialdata_hr.mat','file')
-        load('../calibrations/Axial/axialdata_hr.mat')
-        load('../calibrations/Axial/axialdata_min.mat')
+    if loaddata>0 && exist(datafile_hr,'file')
+        load(datafile_hr)
+        load(datafile_min)
         t0=ceil(data_min.t(end));
     else
-        t0=datenum(2018,10,13);
+        t0=startdate;
     end
     
     % Determine datenums of calibrations
-    load('../calibrations/Axial/axialdata.mat','flipInfoAll')
+    load(flipfile,'flipInfoAll')
     [daylist,id,~]=unique(floor(flipInfoAll.t));
     
-    if t0==datenum(2018,10,13)
+    if t0==startdate
         data_min.t=[];data_min.MNE=[];data_min.MNN=[];data_min.MNZ=[];
         data_min.MKA=[];data_min.iflip=[];
         data_hr.t=[];data_hr.MNE=[];data_hr.MNN=[];data_hr.MNZ=[];
@@ -63,7 +75,7 @@ if axial
             IRIS_data_pull(sta,'MNZ','--',t1,t1+1);
             IRIS_data_pull(sta,'MKA','--',t1,t1+1);
         end
-        %some dates have no data (power failure, etc.)
+        %some dates have no data, otherwise import
         if exist(['../tiltcompare/' sta '/' MNN_string],'file') && ...
                 exist(['../tiltcompare/' sta '/' MNE_string],'file') && ...
                 exist(['../tiltcompare/' sta '/' MNZ_string],'file') && ...
@@ -111,6 +123,16 @@ if axial
             ttempd=decimate(ttempd,dec(2),'fir');
             ttempd=decimate(ttempd,dec(3),'fir');
             
+            % if day of move, remove first half day of data
+            if t1==datenum(2020,09,11)
+                cond=ttempd>datenum(2020,09,11,12,0,0);
+                ntempd=ntempd(cond);
+                etempd=etempd(cond);
+                ztempd=ztempd(cond);
+                Ttempd=Ttempd(cond);
+                ttempd=ttempd(cond);
+            end
+            
             %append
             if length(ttempd)==length(etempd) && length(ttempd)==length(ntempd) ...
                     && length(ttempd)==length(ztempd) && length(ttempd)==length(Ttempd)
@@ -155,15 +177,15 @@ if axial
         t1=t1+1;
     end
     
-    save('../calibrations/Axial/axialdata_hr.mat','data_hr')
-    save('../calibrations/Axial/axialdata_min.mat','data_min')
+    save(insertBefore(flipfile,'.mat','_hr'),'data_hr')
+    save(insertBefore(flipfile,'.mat','_min'),'data_min')
 end
 
 if lily
     sta='AXCC1';
     
     % Load pre-exisiting structure, if it exists
-    if loaddata && exist('../tiltcompare/SCTA_Lily_comp/AXCC1data_hr.mat','file')
+    if loaddata>0 && exist('../tiltcompare/SCTA_Lily_comp/AXCC1data_hr.mat','file')
         load('../tiltcompare/SCTA_Lily_comp/AXCC1data_hr.mat')
         load('../tiltcompare/SCTA_Lily_comp/AXCC1data_min.mat')
         t0=ceil(lily_min.t(end));
@@ -286,7 +308,7 @@ end
 
 if pf
     % Load pre-exisiting structure, if it exists
-    if loaddata && exist('../calibrations/PinonFlat/PFdata_hr.mat','file')
+    if loaddata>0 && exist('../calibrations/PinonFlat/PFdata_hr.mat','file')
         load('../calibrations/PinonFlat/PFdata_hr.mat')
         load('../calibrations/PinonFlat/PFdata_min.mat')
         t0=ceil(data_min.t(end));
