@@ -10,7 +10,7 @@
 %   - options to remove offsets from glitches/fishbumps/etc.
 %
 
-clear; close all
+clear; %close all
 
 comptilts=true;
 
@@ -109,9 +109,9 @@ for i=1:length(flipstart_min)
         ydrift=(cal2(i).y_plus-cal2(i-1).y_plus)/(flipdate_min(i)-flipdate_min(i-1))/24/60; %per minute
     end
     
-%     % uncomment to disable drift correction
-%     xdrift=0;
-%     ydrift=0;
+    % uncomment to disable drift correction
+    xdrift=0;
+    ydrift=0;
     
     disp(['X drift rate = ' num2str(xdrift*60*24*365*10^5) ' \mug/yr'])
     disp(['Y drift rate = ' num2str(ydrift*60*24*365*10^5) ' \mug/yr'])

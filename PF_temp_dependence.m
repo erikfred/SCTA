@@ -15,7 +15,7 @@
 
 clear; close all
 
-dT_dep=true; %false will exclude dT/dt from inversion
+dT_dep=false; %false will exclude dT/dt from inversion
 
 load('../calibrations/PinonFlat/PFdata.mat','flipInfoAll','dataDec100')
 
@@ -23,19 +23,15 @@ load('../calibrations/PinonFlat/PFdata.mat','flipInfoAll','dataDec100')
 a_X1=flipInfoAll.gCal([34:3:58,61:5:end]);
 t_X1=flipInfoAll.t([34:3:58,61:5:end])-flipInfoAll.t(61);
 T_X1=flipInfoAll.T([34:3:58,61:5:end]);
-% dT_X1=diff(T_X1); dT_X1=[dT_X1(1);dT_X1];
 a_X2a=flipInfoAll.gCal(36:3:60); % need to split up +X2 to before and after
 t_X2a=flipInfoAll.t(36:3:60)-flipInfoAll.t(61); % 5-flip scheme
 T_X2a=flipInfoAll.T(36:3:60);
-% dT_X2a=diff(T_X2a); dT_X2a=[dT_X2a(1);dT_X2a];
 a_X2b=flipInfoAll.gCal(64:5:end);
 t_X2b=flipInfoAll.t(64:5:end)-flipInfoAll.t(61);
 T_X2b=flipInfoAll.T(64:5:end);
-% dT_X2b=diff(T_X2b); dT_X2b=[dT_X2b(1);dT_X2b];
 a_negX=-flipInfoAll.gCal(65:5:end);
 t_negX=flipInfoAll.t(65:5:end)-flipInfoAll.t(61);
 T_negX=flipInfoAll.T(65:5:end);
-% dT_negX=diff(T_negX); dT_negX=[dT_negX(1);dT_negX];
 
 if dT_dep
     % interpolate to daily values
@@ -74,12 +70,16 @@ if dT_dep
     % resample to original times
     [~,ix1,~]=intersect(round(td_X1),round(t_X1));
     a_X_star=ad_X_star(ix1);
+    dT_X1=dTd_X1(ix1);
     [~,ix2a,~]=intersect(ceil(td_X2a),ceil(t_X2a));
     a_X_star=[a_X_star;ad_X_star(length(td_X1)+ix2a)];
+    dT_X2a=dTd_X2a(ix2a);
     [~,ix2b,~]=intersect(ceil(td_X2b),ceil(t_X2b));
     a_X_star=[a_X_star;ad_X_star(length(td_X1)+length(td_X2a)+ix2b)];
+    dT_X2b=dTd_X2b(ix2b);
     [~,inegx,~]=intersect(ceil(td_negX),ceil(t_negX));
     a_X_star=[a_X_star;ad_X_star(length(td_X1)+length(td_X2a)+length(td_X2b)+inegx)];
+    dT_negX=dTd_negX(inegx);
 else
     % inversion of original data only
     G_X=[[t_X1;zeros(size(t_X2a));zeros(size(t_X2b));zeros(size(t_negX))],...
@@ -139,7 +139,7 @@ plot(t_X1+flipInfoAll.t(61),a_X1-a_X_star(1:length(t_X1)),'xk','markersize',20)
 text(flipInfoAll.t(end-10),-2.25e-4,['drift = ' num2str(round(m_X(1)*365*10^5,1)) ' ug/y'],'fontsize',15)
 text(flipInfoAll.t(end-10),-3.25e-4,['Tdep = ' num2str(round(m_X(5)*10^5,1)) ' ug/C'],'fontsize',15)
 if dT_dep
-    text(flipInfoAll.t(end-10),-4.25e-4,['dTdep = ' num2str(round(m_X(6)*10^5,1)) ' ug/d/C'],'fontsize',15)
+    text(flipInfoAll.t(end-10),-4.25e-4,['dTdep = ' num2str(round(m_X(6)*10^5,1)) ' ug/(C/d)'],'fontsize',15)
 end
 set(gca,'fontsize',15)
 datetick('x',6,'keeplimits')
@@ -174,7 +174,7 @@ plot([t_X2a;t_X2b]+flipInfoAll.t(61),[a_X2a;a_X2b]-a_X_star(length(t_X1)+1:lengt
 text(flipInfoAll.t(end-10),-2.25e-4,['drift = ' num2str(round(m_X(2)*365*10^5,1)) ', ' num2str(round(m_X(3)*365*10^5,1)) ' ug/y'],'fontsize',15)
 text(flipInfoAll.t(end-10),-3.25e-4,['Tdep = ' num2str(round(m_X(5)*10^5,1)) ' ug/C'],'fontsize',15)
 if dT_dep
-    text(flipInfoAll.t(end-10),-4.25e-4,['dTdep = ' num2str(round(m_X(6)*10^5,1)) ' ug/d/C'],'fontsize',15)
+    text(flipInfoAll.t(end-10),-4.25e-4,['dTdep = ' num2str(round(m_X(6)*10^5,1)) ' ug/(C/d)'],'fontsize',15)
 end
 set(gca,'fontsize',15)
 datetick('x',6,'keeplimits')
@@ -209,7 +209,7 @@ plot(t_negX+flipInfoAll.t(61),a_negX-a_X_star(length([t_X1;t_X2a;t_X2b])+1:end),
 text(flipInfoAll.t(end-10),-2.25e-4,['drift = ' num2str(round(m_X(4)*365*10^5,1)) ' ug/y'],'fontsize',15)
 text(flipInfoAll.t(end-10),-3.25e-4,['Tdep = ' num2str(round(m_X(5)*10^5,1)) ' ug/C'],'fontsize',15)
 if dT_dep
-    text(flipInfoAll.t(end-10),-4.25e-4,['dTdep = ' num2str(round(m_X(6)*10^5,1)) ' ug/d/C'],'fontsize',15)
+    text(flipInfoAll.t(end-10),-4.25e-4,['dTdep = ' num2str(round(m_X(6)*10^5,1)) ' ug/(C/d)'],'fontsize',15)
 end
 set(gca,'fontsize',15)
 xlim([lim_x(1) lim_x(2)])
@@ -241,11 +241,9 @@ end
 a_Y=flipInfoAll.gCal([35:3:59,62:5:end]);
 t_Y=flipInfoAll.t([35:3:59,62:5:end])-flipInfoAll.t(61);
 T_Y=flipInfoAll.T([35:3:59,62:5:end]);
-% dT_Y=diff(T_Y); dT_Y=[dT_Y(1);dT_Y];
 a_negY=-flipInfoAll.gCal(63:5:end);
 t_negY=flipInfoAll.t(63:5:end)-flipInfoAll.t(61);
 T_negY=flipInfoAll.T(63:5:end);
-% dT_negY=diff(T_negY); dT_negY=[dT_negY(1);dT_negY];
 
 if dT_dep
     % interpolate to daily values
@@ -272,8 +270,10 @@ if dT_dep
     % resample to original times
     [~,iy,~]=intersect(round(td_Y),round(t_Y));
     a_Y_star=ad_Y_star(iy);
+    dT_Y=dTd_Y(iy);
     [~,inegy,~]=intersect(ceil(td_negY),ceil(t_negY));
     a_Y_star=[a_Y_star;ad_Y_star(length(td_Y)+inegy)];
+    dT_negY=dTd_negY(inegy);
 else
     % inversion of original data only
     G_Y=[[t_Y;zeros(size(t_negY))],...
@@ -311,6 +311,9 @@ plot(t_Y+flipInfoAll.t(61),a_Y_star(1:length(t_Y))-mean(a_Y),'*r','markersize',2
 plot(t_Y+flipInfoAll.t(61),a_Y-a_Y_star(1:length(t_Y)),'xk','markersize',20)
 text(flipInfoAll.t(end-10),-2.25e-4,['drift = ' num2str(round(m_Y(1)*365*10^5,1)) ' ug/y'],'fontsize',15)
 text(flipInfoAll.t(end-10),-3.25e-4,['Tdep = ' num2str(round(m_Y(3)*10^5,1)) ' ug/C'],'fontsize',15)
+if dT_dep
+    text(flipInfoAll.t(end-10),-4.25e-4,['dTdep = ' num2str(round(m_Y(6)*10^5,1)) ' ug/(C/d)'],'fontsize',15)
+end
 set(gca,'fontsize',15)
 datetick('x',6,'keeplimits')
 lim_x=xlim;
@@ -342,6 +345,9 @@ plot(t_negY+flipInfoAll.t(61),a_Y_star(length(t_Y)+1:end)-mean(a_negY),'*r','mar
 plot(t_negY+flipInfoAll.t(61),a_negY-a_Y_star(length(t_Y)+1:end),'xk','markersize',20)
 text(flipInfoAll.t(end-10),-2.25e-4,['drift = ' num2str(round(m_Y(2)*365*10^5,1)) ' ug/y'],'fontsize',15)
 text(flipInfoAll.t(end-10),-3.25e-4,['Tdep = ' num2str(round(m_Y(3)*10^5,1)) ' ug/C'],'fontsize',15)
+if dT_dep
+    text(flipInfoAll.t(end-10),-4.25e-4,['dTdep = ' num2str(round(m_Y(6)*10^5,1)) ' ug/(C/d)'],'fontsize',15)
+end
 set(gca,'fontsize',15)
 xlim([lim_x(1) lim_x(2)])
 datetick('x',6,'keeplimits')

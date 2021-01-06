@@ -9,10 +9,10 @@ clear; close all;
 
 %%%%%%%%%%CONFIG%%%%%%%%%%
 axial=false;
-lily=true;
-pf=false;
+lily=false;
+pf=true;
 
-loaddata=1; %0 - start from scratch, 1 - load from pre-move era, 2 - load from post-move era
+loaddata=0; %0 - start from scratch, 1 - load from pre-move era, 2 - load from post-move era
 flipfile='../calibrations/Axial/axialdata_newloc.mat'; % only used if loaddata==0
 startdate=datenum(2020,09,11); % datenum(2018,10,13) [only used if loaddata==0]
 tf=floor(now);

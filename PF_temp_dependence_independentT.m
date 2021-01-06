@@ -1,7 +1,8 @@
 % PF_temp_dependence_independentT.m
 %
 % Sets up and solves inversion to get T dependence and drift from Pinon
-% Flat calibration data.
+% Flat calibration data. Does not constrain different orientations of each
+% axis to have same temperature dependence.
 %
 
 load('../calibrations/PinonFlat/PFdata.mat','flipInfoAll','dataDec100')

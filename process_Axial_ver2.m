@@ -17,7 +17,7 @@ else
 end
 
 % Temperature sensitivity parameters
-p.dadT=[6.2023e-5 2.9562e-5 NaN];
+p.dadT=[2.9562e-5 6.2023e-5 NaN]; % [dxdT dydT dzdT]
 p.TRef = 5.7;
 
 % Find flip parameters

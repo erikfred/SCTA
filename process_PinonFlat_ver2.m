@@ -11,7 +11,7 @@ startDate = datenum('10/18/18'); %daily flips begin 10/18/18
 endDate = floor(now-1);
 
 % Temperature sensitivity parameters
-p.dadT=[6.2023e-5 2.9562e-5 NaN];
+p.dadT=[2.9562e-5 6.2023e-5 NaN]; % [dxdT dydT dzdT]
 p.TRef=30;
 
 % Find flip parameters
