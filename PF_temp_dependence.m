@@ -15,22 +15,22 @@
 
 clear; close all
 
-dT_dep=false; %false will exclude dT/dt from inversion
+dT_dep=true; %false will exclude dT/dt from inversion
 
 load('../calibrations/PinonFlat/PFdata.mat','flipInfoAll','dataDec100')
 
 % +X1, +X2, and -X
-a_X1=flipInfoAll.gCal([34:3:58,61:5:end]);
-t_X1=flipInfoAll.t([34:3:58,61:5:end])-flipInfoAll.t(61);
-T_X1=flipInfoAll.T([34:3:58,61:5:end]);
-a_X2a=flipInfoAll.gCal(36:3:60); % need to split up +X2 to before and after
-t_X2a=flipInfoAll.t(36:3:60)-flipInfoAll.t(61); % 5-flip scheme
-T_X2a=flipInfoAll.T(36:3:60);
+a_X1=flipInfoAll.gCal([1:3:58,61:5:end]);
+t_X1=flipInfoAll.t([1:3:58,61:5:end])-flipInfoAll.t(1);
+T_X1=flipInfoAll.T([1:3:58,61:5:end]);
+a_X2a=flipInfoAll.gCal(3:3:60); % need to split up +X2 to before and after
+t_X2a=flipInfoAll.t(3:3:60)-flipInfoAll.t(1);
+T_X2a=flipInfoAll.T(3:3:60);
 a_X2b=flipInfoAll.gCal(64:5:end);
-t_X2b=flipInfoAll.t(64:5:end)-flipInfoAll.t(61);
+t_X2b=flipInfoAll.t(64:5:end)-flipInfoAll.t(1);
 T_X2b=flipInfoAll.T(64:5:end);
 a_negX=-flipInfoAll.gCal(65:5:end);
-t_negX=flipInfoAll.t(65:5:end)-flipInfoAll.t(61);
+t_negX=flipInfoAll.t(65:5:end)-flipInfoAll.t(1);
 T_negX=flipInfoAll.T(65:5:end);
 
 if dT_dep
@@ -238,11 +238,11 @@ else
 end
 
 % +Y and -Y
-a_Y=flipInfoAll.gCal([35:3:59,62:5:end]);
-t_Y=flipInfoAll.t([35:3:59,62:5:end])-flipInfoAll.t(61);
-T_Y=flipInfoAll.T([35:3:59,62:5:end]);
+a_Y=flipInfoAll.gCal([2:3:59,62:5:end]);
+t_Y=flipInfoAll.t([2:3:59,62:5:end])-flipInfoAll.t(1);
+T_Y=flipInfoAll.T([2:3:59,62:5:end]);
 a_negY=-flipInfoAll.gCal(63:5:end);
-t_negY=flipInfoAll.t(63:5:end)-flipInfoAll.t(61);
+t_negY=flipInfoAll.t(63:5:end)-flipInfoAll.t(1);
 T_negY=flipInfoAll.T(63:5:end);
 
 if dT_dep

@@ -8,8 +8,10 @@ dataLoaded = 1;
 
 % Start and end date
 % startDate = datenum('8/1/18');
+% startDate = datenum('7/9/18');
 startDate = datenum('09/11/20');
 endDate = floor(now-1);
+% endDate = datenum('8/1/18');
 if startDate==datenum('09/11/20')
     suffix='_newloc';
 else
@@ -252,8 +254,8 @@ plot(flipInfoAll.t(i_xb(2:2:end)),(flipInfoAll.gCal(i_xb(2:2:end))+flipInfoAll.g
 plot(flipInfoAll.t(i_yb),(flipInfoAll.gCal(i_yb)+flipInfoAll.gCal(i_negy))/2,'^r',...
     flipInfoAll.t(i_yb),(flipInfoAll.gCalTCor(i_yb)+flipInfoAll.gCalTCor(i_negy))/2,'+r','markersize',18);
 xl = xlim; yl = ylim;
-plot([0 0]+xl(1)+diff(xl)/10,mean(yl)+[0 0.0001],'-k')
-text(xl(1)+diff(xl)/9,mean(yl)+0.00005,'10^{-5} g')
+plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 0.0004],'-k','linewidth',2)
+text(xl(1)+diff(xl)/9,mean(yl)-0.00045,'10 \mug','fontsize',12)
 legend('1st X','1st X (T Corrected)','2nd X','2nd X (T Corrected)','-X','-X (T Corrected)','Y','Y (T Corrected)',...
     '-Y','-Y (T Corrected)','X span','X span (T corrected)','Y span','Y span (T corrected)','location','northwest')
 datetick('x',3)

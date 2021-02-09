@@ -1,4 +1,4 @@
-% assess_calibrations.m
+% inspect_calibrations.m
 %
 % Allows user to browse through calibration intervals and assess the
 % accuracy of the automated data selection used in the calibration.

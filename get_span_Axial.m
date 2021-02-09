@@ -1,4 +1,4 @@
-%get_span_PF.m
+%get_span_Axial.m
 %
 % Calculates the span of both x- and y-channels under the
 % +Z->+X->+Y->-Y->+X->-X->+Z flipping schema.

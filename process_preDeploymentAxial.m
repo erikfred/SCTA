@@ -1,7 +1,7 @@
 % Script to process 24 hour preDeployment flip data test for Axial SCTA
 
 % Load Data
-data = get_sctaDay('/users/wilcock/MyDrive/APL/SCTA-Share/PredeploymentTesting/SCTA-Accel_2018-05-24.nc');
+data = get_sctaDay('/Volumes/GoogleDrive/My Drive/Oceanography/SCTA-Share/PredeploymentTesting/SCTA-Accel_2018-05-24.nc');
 
 % Decimate the data
 [dataDec] = decimate_SCTA(data,1);
