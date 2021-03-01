@@ -26,6 +26,7 @@ iy=[2:3:59,62:5:length(flipInfoAll.t)]';
 ycals=flipInfoAll.gCal(iy);
 
 lindrift=false; % if false, calculates drift independently each interval
+interpolate=0; % 1 to interpolate between calibrations, 0 to extrapolate data out
 
 stitch_method=1; % 0: interpolation and best fit, 1: inversion
 
@@ -77,11 +78,17 @@ flipdate_min=stitch_min.t(flipstart_min); %datenums of flips for reference
 
 iend=length(stitch_min.t);
 
+cal_log=[];
+transients=[];
 for i=1:length(flipstart_min)
     if i~=16
         %specify samples to exclude around flip
         ipre=4;
-        ipost=119;
+        ipost=539;
+        
+        transients(i).t=stitch_min.t(flipstart_min(i):flipstart_min(i)+ipost);
+        transients(i).x=stitch_min.MNE(flipstart_min(i):flipstart_min(i)+ipost);
+        transients(i).y=stitch_min.MNN(flipstart_min(i):flipstart_min(i)+ipost);
         
         %substitute points during calibration and recovery with NaNs
         inan=flipstart_min(i)-ipre:flipstart_min(i)+ipost;
@@ -108,6 +115,10 @@ for i=1:length(flipstart_min)
         nint=stitch_min.MNN(flipstart_min(i-1)+(ipost+1):171394);
         Tint=stitch_min.MKA(flipstart_min(i-1)+(ipost+1):171394);
         tint=stitch_min.t(flipstart_min(i-1)+(ipost+1):171394);
+        
+        transients(i).t=zeros(size(transients(i-1).t));
+        transients(i).x=zeros(size(transients(i-1).t));
+        transients(i).y=zeros(size(transients(i-1).t));
     elseif i==17
         eint=stitch_min.MNE(178253:flipstart_min(i)-(ipre+1));
         nint=stitch_min.MNN(178253:flipstart_min(i)-(ipre+1));
@@ -125,7 +136,7 @@ for i=1:length(flipstart_min)
         ydrift=m_Y(1)/24/60;
         disp(['X drift rate = ' num2str(xdrift*60*24*365*10^5) ' \mug/yr'])
         disp(['Y drift rate = ' num2str(ydrift*60*24*365*10^5) ' \mug/yr'])
-    else
+    elseif interpolate==1
         
         % pull calibration value, special handling of certain segments
         if i==1 % assume no drift for first seg
@@ -152,6 +163,69 @@ for i=1:length(flipstart_min)
             ydrift=(cal2.y_plus-cal1.y_plus)/(flipdate_min(i)-flipdate_min(i-1))/24/60; %per minute
             disp(['X drift rate = ' num2str(xdrift*60*24*365*10^5) ' \mug/yr'])
             disp(['Y drift rate = ' num2str(ydrift*60*24*365*10^5) ' \mug/yr'])
+        end
+        
+        % current cal gets stored as previous cal for next iteration
+        if i~=16 % i=16 is a gap, not a calibration
+            cal1=cal2;
+        end
+    else
+        % pull calibration value, special handling of certain segments
+        if i==1 % assume no drift for first seg
+            cal2.x_plus=xcals(i);
+            cal2.y_plus=ycals(i);
+            cal1=cal2;
+            cal_log(i,1)=0; cal_log(i,2)=0;
+            continue
+        elseif i>16 % i=16 is a gap, not a calibration
+            cal2.x_plus=xcals(i-1);
+            cal2.y_plus=ycals(i-1);
+        else
+            cal2.x_plus=xcals(i);
+            cal2.y_plus=ycals(i);
+        end
+        
+        % calculate drift
+        if i==16 || i==17 % i=16 is a gap, not a calibration
+            xdrift=(cal2.x_plus-cal1.x_plus)/(flipdate_min(17)-flipdate_min(15))/24/60; %per minute
+            ydrift=(cal2.y_plus-cal1.y_plus)/(flipdate_min(17)-flipdate_min(15))/24/60; %per minute
+            disp(['X drift rate = ' num2str(xdrift*60*24*365*10^5) ' \mug/yr'])
+            disp(['Y drift rate = ' num2str(ydrift*60*24*365*10^5) ' \mug/yr'])
+            cal_log(i,1)=0; cal_log(i,2)=0;
+        else
+            delta_ax=0; % need to sort out how to determine this
+            cal1.ax=(eint(1)+delta_ax)*(tint(end)-flipdate_min(i-1))/(tint(end)-tint(1))-...
+                eint(end)*(tint(1)-flipdate_min(i-1))/(tint(end)-tint(1));
+            cal2.ax=eint(end)*(flipdate_min(i)-tint(1))/(tint(end)-tint(1))-...
+                (eint(1)+delta_ax)*(flipdate_min(i)-tint(end))/(tint(end)-tint(1));
+            cal2.x_dif_cal=cal2.ax-cal1.ax-(cal2.x_plus-cal1.x_plus);
+            
+            delta_ay=0; % need to sort out how to determine this
+            cal1.ay=(nint(1)+delta_ay)*(tint(end)-flipdate_min(i-1))/(tint(end)-tint(1))-...
+                nint(end)*(tint(1)-flipdate_min(i-1))/(tint(end)-tint(1));
+            cal2.ay=nint(end)*(flipdate_min(i)-tint(1))/(tint(end)-tint(1))-...
+                (nint(1)+delta_ay)*(flipdate_min(i)-tint(end))/(tint(end)-tint(1));
+            cal2.y_dif_cal=cal2.ay-cal1.ay-(cal2.y_plus-cal1.y_plus);
+            
+            xdrift=(cal2.x_plus-cal1.x_plus)/(flipdate_min(i)-flipdate_min(i-1))/24/60; %per minute
+            ydrift=(cal2.y_plus-cal1.y_plus)/(flipdate_min(i)-flipdate_min(i-1))/24/60; %per minute
+            disp(['X drift rate = ' num2str(xdrift*60*24*365*10^5) ' \mug/yr'])
+            disp(['Y drift rate = ' num2str(ydrift*60*24*365*10^5) ' \mug/yr'])
+            
+            figure(12)
+            plot(tint,eint,'b','linewidth',1)
+            hold on
+            plot([flipdate_min(i-1) flipdate_min(i)],[cal1.ax cal2.ax],'bo:')
+            datetick
+            title('X segments')
+            figure(13)
+            plot(tint,nint,'b','linewidth',1)
+            hold on
+            plot([flipdate_min(i-1) flipdate_min(i)],[cal1.ay cal2.ay],'bo:')
+            datetick
+            title('Y segments')
+            
+            cal_log(i,1)=cal2.x_dif_cal; cal_log(i,2)=cal2.y_dif_cal;
         end
         
         % current cal gets stored as previous cal for next iteration
@@ -547,6 +621,7 @@ else
 end
 %% resume original code
 
+keyboard;
 
 %% Manually correct connection loss offset (come up with better solution)
 

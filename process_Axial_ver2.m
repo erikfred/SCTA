@@ -157,6 +157,9 @@ elseif dataLoaded==1
             if dayn>datenum(2020,05,09) && dayn<=datenum(2020,06,01)
                 % datastream cut during this interval due to cable issues
                 continue
+            elseif dayn>datenum(2021,01,13) && dayn<=datenum(2021,01,17)
+                % datastream cut during this interval due to cable issues
+                continue
             elseif isempty(data.t) && dayn>=datenum(2019,08,13)
                 data=[];
                 cha={'MNE','MNN','MNZ','MKA'};

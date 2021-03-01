@@ -8,7 +8,7 @@
 clear; close all;
 
 %%%%%%%%%%CONFIG%%%%%%%%%%
-axial=false;
+axial=true;
 lily=true;
 pf=false;
 

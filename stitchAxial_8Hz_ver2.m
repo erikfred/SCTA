@@ -86,6 +86,8 @@ for i=1:length(flipstart_min)
     if stitch_min.t(flipstart_min(i))<datenum(2019,08,13)
         cal2(i).x_plus=flipInfoAll.gCalTCor(icals(1));
         cal2(i).y_plus=flipInfoAll.gCalTCor(icals(2));
+    elseif i==12 || i==17
+        cal2(i)=cal2(i-1);
     else
         cal2(i).x_plus=flipInfoAll.gCalTCor(icals(1));
         cal2(i).y_plus=flipInfoAll.gCalTCor(icals(2));
@@ -110,8 +112,8 @@ for i=1:length(flipstart_min)
     end
     
     % uncomment to disable drift correction
-    xdrift=0;
-    ydrift=0;
+%     xdrift=0;
+%     ydrift=0;
     
     disp(['X drift rate = ' num2str(xdrift*60*24*365*10^5) ' \mug/yr'])
     disp(['Y drift rate = ' num2str(ydrift*60*24*365*10^5) ' \mug/yr'])
@@ -286,12 +288,17 @@ if comptilts
     lily_min.LAX_rot=lily_min.LAX_rot-lily_min.LAX_rot(1);
     lily_min.LAY_rot=lily_min.LAY_rot-lily_min.LAY_rot(1);
     
+    %interpolate onto same time step
+    lily_min.LAX_rot_int=interp1(lily_min.t,lily_min.LAX_rot,stitch_min.t);
+    lily_min.LAY_rot_int=interp1(lily_min.t,lily_min.LAY_rot,stitch_min.t);
+    
     figure(67)
     clf; hold on
-    plot(stitch_min.t,-stitch_min.LAX,'k','linewidth',1)
+    plot(stitch_min.t,-stitch_min.LAX,'r','linewidth',1)
     plot(lily_min.t,lily_min.LAX_rot,'b','linewidth',1)
-    plot(flipdate_min,-stitch_min.LAX(flipstart_min-5),'+r','markersize',5,'linewidth',2)
-    legend('SCTA','LILY','location','northwest')
+    plot(stitch_min.t,-stitch_min.LAX-lily_min.LAX_rot_int,'k','linewidth',1)
+    plot(flipdate_min,-stitch_min.LAX(flipstart_min-5),'+k','markersize',5,'linewidth',2)
+    legend('SCTA','LILY','difference','location','northwest')
     title(['East Tilt ' datestr(floor(stitch_min.t(1))) ' to ' datestr(floor(stitch_min.t(end)))])
     ylabel('Tilt (\murad)')
     datetick('x',6)
@@ -300,11 +307,12 @@ if comptilts
     
     figure(68)
     clf; hold on
-    plot(stitch_min.t,-stitch_min.LAY,'k','linewidth',1)
+    plot(stitch_min.t,-stitch_min.LAY,'r','linewidth',1)
     plot(lily_min.t,lily_min.LAY_rot,'b','linewidth',1)
-    plot(flipdate_min,-stitch_min.LAY(flipstart_min-5),'+r','markersize',5,'linewidth',2)
-    legend('SCTA','LILY','location','northwest')
-    title(['North Tilt ' datestr(floor(stitch_min.t(1))) ' to ' datestr(floor(stitch_min.t(1)))])
+    plot(stitch_min.t,-stitch_min.LAY-lily_min.LAY_rot_int,'k','linewidth',1)
+    plot(flipdate_min,-stitch_min.LAY(flipstart_min-5),'+k','markersize',5,'linewidth',2)
+    legend('SCTA','LILY','difference','location','northwest')
+    title(['North Tilt ' datestr(floor(stitch_min.t(1))) ' to ' datestr(floor(stitch_min.t(end)))])
     ylabel('Tilt (\murad)')
     datetick('x',6)
     set(gca,'fontsize',14)
