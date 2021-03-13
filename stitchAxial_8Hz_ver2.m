@@ -14,7 +14,7 @@ clear; %close all
 
 comptilts=true;
 
-era=2; % 1 - pre-move era, 2 - post-move era
+era=1; % 1 - pre-move era, 2 - post-move era
 
 if era==1
     flipfile='../calibrations/Axial/axialdata.mat';
@@ -301,7 +301,8 @@ if comptilts
     legend('SCTA','LILY','difference','location','northwest')
     title(['East Tilt ' datestr(floor(stitch_min.t(1))) ' to ' datestr(floor(stitch_min.t(end)))])
     ylabel('Tilt (\murad)')
-    datetick('x',6)
+    datetick('x',12)
+    xtickangle(45)
     set(gca,'fontsize',14)
     box on
     
@@ -314,7 +315,8 @@ if comptilts
     legend('SCTA','LILY','difference','location','northwest')
     title(['North Tilt ' datestr(floor(stitch_min.t(1))) ' to ' datestr(floor(stitch_min.t(end)))])
     ylabel('Tilt (\murad)')
-    datetick('x',6)
+    datetick('x',12)
+    xtickangle(45)
     set(gca,'fontsize',14)
     box on
 end

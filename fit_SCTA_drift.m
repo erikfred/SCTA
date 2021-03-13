@@ -521,12 +521,12 @@ else
 end
 
 figure(2); clf
-plot(time{1},a_obs-9.7945,'o','markersize',20)
+plot(time{1},a_obs-9.793,'bo','markersize',10,'linewidth',1)
 hold on
-plot(time{1},a_lin_star-9.7945,'.','markersize',20)
-plot(time{1},a_star-9.7945,'s','markersize',20)
+plot(time{1},a_lin_star-9.793,'r^','markersize',10,'linewidth',1)
+plot(time{1},a_star-9.793,'s','markersize',10,'linewidth',1)
 plot(time{1},a_obs-a_star,'kx','markersize',10,'linewidth',2)
-ylabel('Acceleration - 9.7945 (m/s^2)')
+ylabel('Acceleration - 9.793 (m/s^2)')
 xlabel('Days since first Calibration')
 title(['+Y Only \sigma = ' num2str(std(a_obs-a_star)) ' m/s^2'])
 set(gca,'FontSize',16)
