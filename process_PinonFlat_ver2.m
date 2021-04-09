@@ -4,7 +4,7 @@
 
 %% Parameters
 % dataLoaded: 0 - need to load from raw files; 1 need to append to existing matlab file; 2 - already in memory
-dataLoaded = 1;
+dataLoaded = 0;
 
 % Start and end date
 startDate = datenum('10/18/18'); %daily flips begin 10/18/18
@@ -155,7 +155,7 @@ datetick
 title({'Pinon Flat SCTA Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
 xlabel('Date')
 ylabel('Calibration, m/s^2')
-set(gca,'FontSize',15)
+set(gca,'FontSize',16)
 
 fh=gcf;
 fh.PaperUnits='inches';

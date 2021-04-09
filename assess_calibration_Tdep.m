@@ -4,9 +4,9 @@
 % of the x and y channels when in the vertical.
 %
 
-Axial=false;
-PinonFlat=false;
-OldOcean=true;
+Axial=false; % Axial sensor, but test conducted at UW
+PinonFlat=false; % PF sensor, but test conducted at UW
+OldOcean=true; % simultaneous testing of both sensors
 
 if Axial
     

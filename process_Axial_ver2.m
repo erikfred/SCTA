@@ -4,14 +4,12 @@
 
 %% Parameters
 % dataLoaded: 0 - need to load from raw files; 1 - append to existing matlab file
-dataLoaded = 1;
+dataLoaded = 0;
 
 % Start and end date
-% startDate = datenum('8/1/18');
-% startDate = datenum('7/9/18');
-startDate = datenum('09/11/20');
+startDate = datenum('8/1/18');
+% startDate = datenum('09/11/20');
 endDate = floor(now-1);
-% endDate = datenum('8/1/18');
 if startDate==datenum('09/11/20')
     suffix='_newloc';
 else

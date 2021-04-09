@@ -14,7 +14,7 @@ clear; %close all
 
 comptilts=true;
 
-era=1; % 1 - pre-move era, 2 - post-move era
+era=2; % 1 - pre-move era, 2 - post-move era
 
 if era==1
     flipfile='../calibrations/Axial/axialdata.mat';

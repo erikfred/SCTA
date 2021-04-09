@@ -26,7 +26,7 @@ iy=[2:3:59,62:5:length(flipInfoAll.t)]';
 ycals=flipInfoAll.gCal(iy);
 
 lindrift=false; % if false, calculates drift independently each interval
-interpolate=0; % 1 to interpolate between calibrations, 0 to extrapolate data out
+interpolate=0; % 1 to interpolate between calibrations (original), 0 to extrapolate data out (William's)
 
 stitch_method=1; % 0: interpolation and best fit, 1: inversion
 
@@ -81,55 +81,112 @@ iend=length(stitch_min.t);
 cal_log=[];
 transients=[];
 for i=1:length(flipstart_min)
-    if i~=16
-        %specify samples to exclude around flip
-        ipre=4;
-        ipost=539;
+    %specify samples to exclude around flip
+    ipre=4;
+    ipost=539;
         
-        transients(i).t=stitch_min.t(flipstart_min(i):flipstart_min(i)+ipost);
-        transients(i).x=stitch_min.MNE(flipstart_min(i):flipstart_min(i)+ipost);
-        transients(i).y=stitch_min.MNN(flipstart_min(i):flipstart_min(i)+ipost);
-        
-        %substitute points during calibration and recovery with NaNs
-        inan=flipstart_min(i)-ipre:flipstart_min(i)+ipost;
-        stitch_min.MNE(inan)=nan;
-        stitch_min.MNN(inan)=nan;
-        stitch_min.MNZ(inan)=nan;
-        stitch_min.MKA(inan)=nan;
-    end
-    
     if i==1
         eint=stitch_min.MNE(1:flipstart_min(i)-(ipre+1));
         nint=stitch_min.MNN(1:flipstart_min(i)-(ipre+1));
         Tint=stitch_min.MKA(1:flipstart_min(i)-(ipre+1));
         tint=stitch_min.t(1:flipstart_min(i)-(ipre+1));
+        
+        transients(i).t=zeros(size([ipre:ipost]'));
+        transients(i).x=zeros(size([ipre:ipost]'));
+        transients(i).y=zeros(size([ipre:ipost]'));
+        transients(i).T=zeros(size([ipre:ipost]'));
+        transients(i).x_cor=transients(i).x;
+        transients(i).y_cor=transients(i).y;
+        
     elseif i==16
+        eint=stitch_min.MNE(flipstart_min(i-1)+(ipost+1):171394);
+        nint=stitch_min.MNN(flipstart_min(i-1)+(ipost+1):171394);
+        Tint=stitch_min.MKA(flipstart_min(i-1)+(ipost+1):171394);
+        tint=stitch_min.t(flipstart_min(i-1)+(ipost+1):171394);
+        
+        transients(i).t=stitch_min.t(flipstart_min(i-1):flipstart_min(i-1)+ipost);
+        transients(i).x=stitch_min.MNE(flipstart_min(i-1):flipstart_min(i-1)+ipost);
+        transients(i).y=stitch_min.MNN(flipstart_min(i-1):flipstart_min(i-1)+ipost);
+        transients(i).T=stitch_min.MKA(flipstart_min(i-1):flipstart_min(i-1)+ipost);
+        
+        %determine linear fit, subtract from transients
+        px=polyfit([1:length(eint)]',eint,1);
+        transients(i).x_cor=transients(i).x-px(1)*[1:length(transients(i).x)]';
+        py=polyfit([1:length(nint)]',nint,1);
+        transients(i).y_cor=transients(i).y-py(1)*[1:length(transients(i).y)]';
+%         px=polyfit([1:100]',transients(i).x(end-99:end),1);
+%         transients(i).x_cor=transients(i).x-px(1)*[1:length(transients(i).x)]';
+%         py=polyfit([1:100]',transients(i).y(end-99:end),1);
+%         transients(i).y_cor=transients(i).y-py(1)*[1:length(transients(i).y)]';
+        
+        %substitute points during calibration and recovery with NaNs
+        inan=flipstart_min(i-1)-ipre:flipstart_min(i-1)+ipost;
+        stitch_min.MNE(inan)=nan;
+        stitch_min.MNN(inan)=nan;
+        stitch_min.MNZ(inan)=nan;
+        stitch_min.MKA(inan)=nan;
+    elseif i==17
+        eint=stitch_min.MNE(178253:flipstart_min(i)-(ipre+1));
+        nint=stitch_min.MNN(178253:flipstart_min(i)-(ipre+1));
+        Tint=stitch_min.MKA(178253:flipstart_min(i)-(ipre+1));
+        tint=stitch_min.t(178253:flipstart_min(i)-(ipre+1));
+        
+        transients(i).t=zeros(size([ipre:ipost]'));
+        transients(i).x=zeros(size([ipre:ipost]'));
+        transients(i).y=zeros(size([ipre:ipost]'));
+        transients(i).T=zeros(size([ipre:ipost]'));
+        transients(i).x_cor=transients(i).x;
+        transients(i).y_cor=transients(i).y;
+        
         %substitute limited intervening points with NaNs
         inan=171395:178252;
         stitch_min.MNE(inan)=nan;
         stitch_min.MNN(inan)=nan;
         stitch_min.MNZ(inan)=nan;
         stitch_min.MKA(inan)=nan;
-        
-        eint=stitch_min.MNE(flipstart_min(i-1)+(ipost+1):171394);
-        nint=stitch_min.MNN(flipstart_min(i-1)+(ipost+1):171394);
-        Tint=stitch_min.MKA(flipstart_min(i-1)+(ipost+1):171394);
-        tint=stitch_min.t(flipstart_min(i-1)+(ipost+1):171394);
-        
-        transients(i).t=zeros(size(transients(i-1).t));
-        transients(i).x=zeros(size(transients(i-1).t));
-        transients(i).y=zeros(size(transients(i-1).t));
-    elseif i==17
-        eint=stitch_min.MNE(178253:flipstart_min(i)-(ipre+1));
-        nint=stitch_min.MNN(178253:flipstart_min(i)-(ipre+1));
-        Tint=stitch_min.MKA(178253:flipstart_min(i)-(ipre+1));
-        tint=stitch_min.t(178253:flipstart_min(i)-(ipre+1));
     else
         eint=stitch_min.MNE(flipstart_min(i-1)+(ipost+1):flipstart_min(i)-(ipre+1));
         nint=stitch_min.MNN(flipstart_min(i-1)+(ipost+1):flipstart_min(i)-(ipre+1));
         Tint=stitch_min.MKA(flipstart_min(i-1)+(ipost+1):flipstart_min(i)-(ipre+1));
         tint=stitch_min.t(flipstart_min(i-1)+(ipost+1):flipstart_min(i)-(ipre+1));
+        
+        transients(i).t=stitch_min.t(flipstart_min(i-1):flipstart_min(i-1)+ipost);
+        transients(i).x=stitch_min.MNE(flipstart_min(i-1):flipstart_min(i-1)+ipost);
+        transients(i).y=stitch_min.MNN(flipstart_min(i-1):flipstart_min(i-1)+ipost);
+        transients(i).T=stitch_min.MKA(flipstart_min(i-1):flipstart_min(i-1)+ipost);
+        
+        %determine linear fit, subtract from transients
+        px=polyfit([1:length(eint)]',eint,1);
+        transients(i).x_cor=transients(i).x-px(1)*[1:length(transients(i).x)]';
+        py=polyfit([1:length(nint)]',nint,1);
+        transients(i).y_cor=transients(i).y-py(1)*[1:length(transients(i).y)]';
+%         px=polyfit([1:100]',transients(i).x(end-99:end),1);
+%         transients(i).x_cor=transients(i).x-px(1)*[1:length(transients(i).x)]';
+%         py=polyfit([1:100]',transients(i).y(end-99:end),1);
+%         transients(i).y_cor=transients(i).y-py(1)*[1:length(transients(i).y)]';
+        
+        %substitute points during calibration and recovery with NaNs
+        inan=flipstart_min(i-1)-ipre:flipstart_min(i-1)+ipost;
+        stitch_min.MNE(inan)=nan;
+        stitch_min.MNN(inan)=nan;
+        stitch_min.MNZ(inan)=nan;
+        stitch_min.MKA(inan)=nan;
     end
+    
+%     % plots to check transient detrending
+%     if i~=1 && i~=17
+%         figure(1); clf
+%         plot(transients(i).t,transients(i).x)
+%         hold on
+%         plot(tint,eint)
+%         plot(transients(i).t,transients(i).x_cor)
+%         eint_cor=eint-px(1)*[1:length(eint)]';
+%         plot(tint,eint_cor-(eint_cor(1)-transients(i).x_cor(end)))
+%         ylim([-0.00005 0.00005]+transients(i).x(end))
+%         figure(2)
+%         plot(detrend([transients(i).x(20:end);eint]))
+%         keyboard
+%     end
     
     if lindrift
         xdrift=m_X(1)/24/60;
@@ -207,25 +264,43 @@ for i=1:length(flipstart_min)
                 (nint(1)+delta_ay)*(flipdate_min(i)-tint(end))/(tint(end)-tint(1));
             cal2.y_dif_cal=cal2.ay-cal1.ay-(cal2.y_plus-cal1.y_plus);
             
+            cal_log(i,1)=cal2.x_dif_cal; cal_log(i,2)=cal2.y_dif_cal;
             xdrift=(cal2.x_plus-cal1.x_plus)/(flipdate_min(i)-flipdate_min(i-1))/24/60; %per minute
             ydrift=(cal2.y_plus-cal1.y_plus)/(flipdate_min(i)-flipdate_min(i-1))/24/60; %per minute
             disp(['X drift rate = ' num2str(xdrift*60*24*365*10^5) ' \mug/yr'])
             disp(['Y drift rate = ' num2str(ydrift*60*24*365*10^5) ' \mug/yr'])
             
             figure(12)
-            plot(tint,eint,'b','linewidth',1)
+            subplot(211)
+            plot([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log(1:end-1,1)) sum(cal_log(:,1))],'ko:','linewidth',1)
             hold on
-            plot([flipdate_min(i-1) flipdate_min(i)],[cal1.ax cal2.ax],'bo:')
             datetick
-            title('X segments')
-            figure(13)
-            plot(tint,nint,'b','linewidth',1)
+            title('X segment ends')
+            % adjust timeseries slope as well
+            e0=interp1([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log(1:end-1,1)) sum(cal_log(:,1))],tint(1));
+            e_slope=linspace(eint(1),eint(1)+xdrift*length(eint),length(eint))';
+            subplot(212)
+            plot(tint,eint-e_slope+e0,'b')
             hold on
-            plot([flipdate_min(i-1) flipdate_min(i)],[cal1.ay cal2.ay],'bo:')
+            plot([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log(1:end-1,1)) sum(cal_log(:,1))],'ko','linewidth',1)
             datetick
-            title('Y segments')
+            title('X data')
             
-            cal_log(i,1)=cal2.x_dif_cal; cal_log(i,2)=cal2.y_dif_cal;
+            figure(13)
+            subplot(211)
+            plot([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log(1:end-1,2)) sum(cal_log(:,2))],'ko:','linewidth',1)
+            hold on
+            datetick
+            title('Y segment ends')
+            % adjust timeseries slope as well
+            n0=interp1([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log(1:end-1,2)) sum(cal_log(:,2))],tint(1));
+            n_slope=linspace(nint(1),nint(1)+ydrift*length(nint),length(nint))';
+            subplot(212)
+            plot(tint,nint-n_slope+n0,'b')
+            hold on
+            plot([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log(1:end-1,2)) sum(cal_log(:,2))],'ko','linewidth',1)
+            datetick
+            title('Y data')
         end
         
         % current cal gets stored as previous cal for next iteration
