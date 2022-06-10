@@ -4,12 +4,12 @@
 
 %% Parameters
 % dataLoaded: 0 - need to load from raw files; 1 - append to existing matlab file
-dataLoaded = 0;
+dataLoaded = 1;
 
 % Start and end date
-startDate = datenum('8/1/18');
-% startDate = datenum('09/11/20');
-endDate = floor(now-1);
+% startDate = datenum('8/1/18');
+startDate = datenum('09/11/20');
+endDate = datenum('08/27/21'); % SCTA recovered 8/27/2021
 if startDate==datenum('09/11/20')
     suffix='_newloc';
 else
@@ -269,3 +269,101 @@ fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
 print(['../calibrations/Axial/process_Axial' suffix],'-dtiff','-r300')
+
+% Plot calibrations on separate axes
+figure
+subplot(311); hold on
+plot(flipInfoAll.t(i_x([1:2:end-6 end-3:2:end])),flipInfoAll.gCal(i_x([1:2:end-6 end-3:2:end])),'ko',flipInfoAll.t(i_x([1:2:end-6 end-3:2:end])),flipInfoAll.gCalTCor(i_x([1:2:end-6 end-3:2:end])),'kx','markersize',18);
+datetick('x',3)
+xtickangle(45)
+ylabel('+X1 (m/s^2)')
+set(gca,'fontsize',12)
+ylim([9.81185 9.81205])
+% ylim([9.8118 9.8118+0.00065])
+xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
+yyaxis right
+plot(flipInfoAll.t(i_x(2:2:end)),flipInfoAll.gCal(i_x(2:2:end)),'ro',flipInfoAll.t(i_x(2:2:end)),flipInfoAll.gCalTCor(i_x(2:2:end)),'rx','markersize',18);
+title({'Axial SCTA X Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
+datetick('x',3)
+xtickangle(45)
+ylabel('+X2 (m/s^2)')
+set(gca,'fontsize',12)
+set(gca,'YColor','r')
+ylim([9.81215 9.81215+0.0002])
+% ylim([9.81215 9.81215+0.00065])
+box on
+subplot(312); hold on
+plot(flipInfoAll.t(i_negx([1:end-13 end-11:end])),flipInfoAll.gCal(i_negx([1:end-13 end-11:end])),'ks',flipInfoAll.t(i_negx([1:end-13 end-11:end])),flipInfoAll.gCalTCor(i_negx([1:end-13 end-11:end])),'k+','markersize',18);
+datetick('x',3)
+xtickangle(45)
+ylabel('-X (m/s^2)')
+set(gca,'fontsize',12)
+ylim([9.8088 9.809])
+% ylim([9.8088-0.000325 9.8088+0.000325])
+xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
+box on
+subplot(313); hold on
+plot(flipInfoAll.t(i_xb([1:2:end-26 end-23:2:end-6 end-3:2:end])),(flipInfoAll.gCal(i_xb([1:2:end-26 end-23:2:end-6 end-3:2:end]))+flipInfoAll.gCal(i_negx([1:end-13 end-11:end-3 end-1:end])))/2,'k^',...
+    flipInfoAll.t(i_xb([1:2:end-26 end-23:2:end-6 end-3:2:end])),(flipInfoAll.gCalTCor(i_xb([1:2:end-26 end-23:2:end-6 end-3:2:end]))+flipInfoAll.gCalTCor(i_negx([1:end-13 end-11:end-3 end-1:end])))/2,'k+','markersize',18);
+datetick('x',3)
+xtickangle(45)
+ylabel('X1 span (m/s^2)')
+set(gca,'fontsize',12)
+ylim([9.8104225 9.8104425])
+% ylim([9.8104 9.8104+0.00008125])
+yyaxis right
+plot(flipInfoAll.t(i_xb(2:2:end)),(flipInfoAll.gCal(i_xb(2:2:end))+flipInfoAll.gCal(i_negx))/2,'r^',...
+    flipInfoAll.t(i_xb(2:2:end)),(flipInfoAll.gCalTCor(i_xb(2:2:end))+flipInfoAll.gCalTCor(i_negx))/2,'r+','markersize',18);
+datetick('x',3)
+xtickangle(45)
+ylabel('X2 span (m/s^2)')
+set(gca,'fontsize',12)
+set(gca,'YColor','r')
+ylim([9.81058 9.81060])
+% ylim([9.81056 9.81056+0.00008125])
+xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)+[-0.000005 0.000005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl)+0.00000,'1 \mug','fontsize',12)
+box on
+
+fh=gcf;
+fh.PaperUnits='inches';
+fh.PaperPosition=[0 0 8.5 11];
+print(['../calibrations/Axial/process_Axial' suffix '_x_alt'],'-dtiff','-r300')
+
+figure
+subplot(311); hold on
+plot(flipInfoAll.t(i_y),flipInfoAll.gCal(i_y),'ko',flipInfoAll.t(i_y),flipInfoAll.gCalTCor(i_y),'kx','markersize',18);
+title({'Axial SCTA Y Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
+datetick('x',3)
+xtickangle(45)
+ylabel('+Y (m/s^2)')
+set(gca,'fontsize',12)
+ylim([9.8111 9.8115])
+% ylim([9.8111 9.8111+0.00065])
+xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
+box on
+subplot(312); hold on
+plot(flipInfoAll.t(i_negy([1:36 38:end])),flipInfoAll.gCal(i_negy([1:36 38:end])),'ks',flipInfoAll.t(i_negy([1:36 38:end])),flipInfoAll.gCalTCor(i_negy([1:36 38:end])),'k+','markersize',18);
+datetick('x',3)
+xtickangle(45)
+ylabel('-Y (m/s^2)')
+set(gca,'fontsize',12)
+ylim([9.8107 9.8111])
+% ylim([9.8107-0.0002 9.8107+0.00045])
+xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
+box on
+subplot(313); hold on
+plot(flipInfoAll.t(i_yb([1:36 38:end])),(flipInfoAll.gCal(i_yb([1:36 38:end]))+flipInfoAll.gCal(i_negy([1:36 38:end])))/2,'k^',...
+    flipInfoAll.t(i_yb([1:36 38:end])),(flipInfoAll.gCalTCor(i_yb([1:36 38:end]))+flipInfoAll.gCalTCor(i_negy([1:36 38:end])))/2,'k+','markersize',18);
+datetick('x',3)
+xtickangle(45)
+ylabel('Y span (m/s^2)')
+set(gca,'fontsize',12)
+ylim([9.81109 9.81111])
+% ylim([9.811085 9.811085+0.00008125])
+xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.000005 -0.000005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'1 \mug','fontsize',12)
+box on
+
+fh=gcf;
+fh.PaperUnits='inches';
+fh.PaperPosition=[0 0 8.5 11];
+print(['../calibrations/Axial/process_Axial' suffix '_y_alt'],'-dtiff','-r300')

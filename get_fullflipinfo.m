@@ -48,7 +48,7 @@ if dataLoaded==1
 end
 
 for dayn = daylist'
-    data = get_sctaDay('/Volumes/GoogleDrive/My Drive/Oceanography/SCTA-Share/OOI-SCTA/ParsedData',dayn);
+    data = get_sctaDay('/Users/erikfred/Library/CloudStorage/GoogleDrive-erikfred@uw.edu/My Drive/Oceanography/SCTA-Share/OOI-SCTA/ParsedData',dayn);
     
     if isempty(data.t) && dayn<datenum(2019,08,13) %temporary fix, should apply to entire series
         

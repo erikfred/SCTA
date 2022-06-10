@@ -280,6 +280,7 @@ else
     % compare guess against data and against initial model
     
     if num_ind==4
+        
         figure(91); clf
         subplot(221)
         plot(time{1},accel{1}-mean(accel{1}),'k','linewidth',1)
@@ -456,6 +457,36 @@ else
     
     % plots to demonstrate fit improvement
     if num_ind>1
+        figure(89); clf
+        y_it=accel{1}; y_it=y_it-y_it(1); y_its=y_it*10^5;
+        plot(time{1},y_its,'ok','markersize',15)
+        hold on
+        y_it=y_it-m_star(5)*Temp{1}; y_it=y_it-y_it(1); y_its=y_it*10^5;
+        plot(time{1},y_its,'rs','markersize',15)
+        y_it=y_it-m_star(6)*dTemp{1}; y_it=y_it-y_it(1); y_its=y_it*10^5;
+        plot(time{1},y_its,'b^','markersize',15)
+        y_it=y_it-m_star(11)*exp(-time{1}/m_star(13)); y_it=y_it-y_it(1); y_its=y_it*10^5;
+        plot(time{1},y_its,'kd','markersize',15)
+        y_it=y_it-m_star(1)*time{1}; y_it=y_it-y_it(1); y_its=y_it*10^5;
+        plot(time{1},y_its,'gp','markersize',15)
+        xlabel('Days since first flip')
+        ylabel('Acceleration (\mug)')
+        title('Calibrations')
+        yyaxis right
+        plot(time{1},Temp{1},':c','linewidth',2)
+        ylabel('Temperature (C)')
+        legend('calibration','T-corrected','dT/dt-corrected','exp-corrected','lin-corrected','location','northwest')
+        set(gca,'fontsize',16)
+        box on; grid on; grid minor
+        
+        figure(90); clf
+        plot(time{1},y_its,'gp','markersize',15)
+        xlabel('Days since first flip')
+        ylabel('Acceleration (\mug)')
+        title('Fully-corrected calibrations')
+        set(gca,'fontsize',16)
+        box on; grid on; grid minor
+        
         figure(91); clf
         subplot(221)
         plot(time{1},accel{1}-mean(accel{1}),'-ok','linewidth',1)
