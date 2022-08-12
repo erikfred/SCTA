@@ -241,7 +241,7 @@ for i=1:length(flipstart_min)
 %     end
 end
 
-%tack on remaining data without detrending
+% tack on remaining data without detrending
 stitch_min.MNE(flipstart_min(i)+120:end)=stitch_min.MNE(flipstart_min(i)+120:end)-...
     (stitch_min.MNE(flipstart_min(i)+120)-stitch_min.MNE(flipstart_min(i)-5));
 stitch_min.MNN(flipstart_min(i)+120:end)=stitch_min.MNN(flipstart_min(i)+120:end)-...

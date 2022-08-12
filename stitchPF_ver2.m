@@ -1,4 +1,4 @@
-% stitchPF.m
+% stitchPF_ver2.m
 %
 % Stitches together inter-calibration segments from decimated 40Hz data
 % stream, removing offsets and applying calibrations.
@@ -81,10 +81,18 @@ iend=length(stitch_min.t);
 cal_log_cor=[];
 transients=[];
 for i=1:length(flipstart_min)
-    %specify samples to exclude around flip
-        ipre=4;
-        ipost=539;
-        
+    % specify samples to exclude around flip
+    if i<=22 % 3-orientation sequence
+        ipost=22; % empirically determined, when signal stabalizes
+        ipre=8; % avoids issues when flip starts slightly earlier than expected
+    else % 5-orientation sequence
+        ipost=26; % empirically determined, when signal stabalizes
+        ipre=4; % avoids issues when flip starts slightly earlier than expected
+    end
+    
+    % specify presumed transient duration
+    itran=100;
+            
     if i==1
         eint=stitch_min.MNE(1:flipstart_min(i)-(ipre+1));
         nint=stitch_min.MNN(1:flipstart_min(i)-(ipre+1));
@@ -145,123 +153,104 @@ for i=1:length(flipstart_min)
         stitch_min.MNZ(inan)=nan;
         stitch_min.MKA(inan)=nan;
     else
-        eint=stitch_min.MNE(flipstart_min(i-1)+(ipost+1):flipstart_min(i)-(ipre+1));
-        nint=stitch_min.MNN(flipstart_min(i-1)+(ipost+1):flipstart_min(i)-(ipre+1));
-        Tint=stitch_min.MKA(flipstart_min(i-1)+(ipost+1):flipstart_min(i)-(ipre+1));
-        tint=stitch_min.t(flipstart_min(i-1)+(ipost+1):flipstart_min(i)-(ipre+1));
+        eint=stitch_min.MNE(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre));
+        nint=stitch_min.MNN(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre));
+        Tint=stitch_min.MKA(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre));
+        tint=stitch_min.t(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre));
         
-        transients(i).t=stitch_min.t(flipstart_min(i-1):flipstart_min(i-1)+ipost);
-        transients(i).x=stitch_min.MNE(flipstart_min(i-1):flipstart_min(i-1)+ipost);
-        transients(i).y=stitch_min.MNN(flipstart_min(i-1):flipstart_min(i-1)+ipost);
-        transients(i).T=stitch_min.MKA(flipstart_min(i-1):flipstart_min(i-1)+ipost);
-        
-        %determine linear fit, subtract from transients
-        px=polyfit([1:length(eint)]',eint,1);
-        transients(i).x_cor=transients(i).x-px(1)*[1:length(transients(i).x)]';
-        py=polyfit([1:length(nint)]',nint,1);
-        transients(i).y_cor=transients(i).y-py(1)*[1:length(transients(i).y)]';
-%         px=polyfit([1:100]',transients(i).x(end-99:end),1);
-%         transients(i).x_cor2=transients(i).x-px(1)*[1:length(transients(i).x)]';
-%         py=polyfit([1:100]',transients(i).y(end-99:end),1);
-%         transients(i).y_cor2=transients(i).y-py(1)*[1:length(transients(i).y)]';
+%         % determine linear fit, subtract out for transient fitting
+%         px=polyfit((itran:length(eint))',eint(itran:length(eint)),1);
+%         eint2=eint-polyval(px,(1:length(eint))');
+%         py=polyfit((itran:length(nint))',nint(itran:length(nint)),1);
+%         nint2=nint-polyval(py,(1:length(nint))');
 
         %----- fit initial transient to exp + exp + lin
-        if i<=22 % 3-orientation sequence
-            x_cor=transients(i).x_cor(22:end-4);
-            x=transients(i).x(22:end-4);
-            y_cor=transients(i).y_cor(22:end-4);
-            y=transients(i).y(22:end-4);
-            t=transients(i).t(22:end-4);
-        else % 5-orientation sequence
-            x_cor=transients(i).x_cor(26:end);
-            x=transients(i).x(26:end);
-            y_cor=transients(i).y_cor(26:end);
-            y=transients(i).y(26:end);
-            t=transients(i).t(26:end);
-        end
-        
-        lamda=1:0.1:15; % time constant in minutes
-        tj=(1:length(x))';
+        x=eint;
+        y=nint;
+        t2=linspace(0,1,length(x))';
+        lamda=(1:1000)*t2(2); % time constant in minutes
         
         %-- X
-        norm_list=[];
-        for j=1:length(lamda)
-            gexp1=exp(-tj/lamda(j));
+        normx_list=[];
+        for j=1:20
+            gexp1=exp(-t2/lamda(j));
             for k=1:length(lamda)
                 if k==j
-                    norm_list(j,k)=1;
+                    normx_list(j,k)=1;
                     continue
                 end
-                gexp2=exp(-tj/lamda(k));
+                gexp2=exp(-t2/lamda(k));
                 %construct matrix for inversion
-                Gj=[tj,ones(size(tj)),gexp1,gexp2];
+                Gj=[t2,ones(size(t2)),gexp1,gexp2];
+                if rcond(Gj'*Gj)<10^-15 || isnan(rcond(Gj'*Gj))
+                    keyboard
+                end
                 mj{j,k}=inv(Gj'*Gj)*Gj'*x;
                 xm{j,k}=Gj*mj{j,k};
-                norm_list(j,k)=norm(x-xm{j,k});
+                normx_list(j,k)=norm(x-xm{j,k});
             end
         end
         
-        [~,imx1]=min(min(norm_list));
-        [~,imx2]=min(norm_list(imx1,:));
-        lamdax1_best(:,i)=lamda(imx1);
-        lamdax2_best(:,i)=lamda(imx2);
-        normx_best(:,i)=norm_list(imx1,imx2);
-        mx_best(:,i)=mj{imx1,imx2};
-        x_best(:,i)=xm{imx1,imx2};
-        expx1_best(:,i)=mx_best(3,i)*exp(-tj/lamdax1_best(:,i));
-        expx2_best(:,i)=mx_best(4,i)*exp(-tj/lamdax1_best(:,i));
+        [~,imx1]=min(min(normx_list'));
+        [~,imx2]=min(normx_list(imx1,:));
+        lamdax1_best{i}=lamda(imx1);
+        lamdax2_best{i}=lamda(imx2);
+        normx_best{i}=normx_list(imx1,imx2);
+        mx_best{i}=mj{imx1,imx2};
+        x_best{i}=xm{imx1,imx2};
+        expx1_best{i}=mx_best{i}(3)*exp(-t2/lamdax1_best{i});
+        expx2_best{i}=mx_best{i}(4)*exp(-t2/lamdax2_best{i});
         
         %-- Y
-        norm_list=[];
-        for j=1:length(lamda)
-            gexp1=exp(-tj/lamda(j));
+        normy_list=[];
+        for j=1:20
+            gexp1=exp(-t2/lamda(j));
             for k=1:length(lamda)
                 if k==j
-                    norm_list(j,k)=1;
+                    normy_list(j,k)=1;
                     continue
                 end
-                gexp2=exp(-tj/lamda(k));
+                gexp2=exp(-t2/lamda(k));
                 %construct matrix for inversion
-                Gj=[tj,ones(size(tj)),gexp1,gexp2];
+                Gj=[t2,ones(size(t2)),gexp1,gexp2];
+                if rcond(Gj'*Gj)<10^-15 || isnan(rcond(Gj'*Gj))
+                    keyboard
+                end
                 mj{j,k}=inv(Gj'*Gj)*Gj'*y;
                 ym{j,k}=Gj*mj{j,k};
-                norm_list(j,k)=norm(y-ym{j,k});
+                normy_list(j,k)=norm(y-ym{j,k});
             end
         end
         
-        [~,imy1]=min(min(norm_list));
-        [~,imy2]=min(norm_list(imy1,:));
-        lamday1_best(:,i)=lamda(imy1);
-        lamday2_best(:,i)=lamda(imy2);
-        normy_best(:,i)=norm_list(imy1,imy2);
-        my_best(:,i)=mj{imy1,imy2};
-        y_best(:,i)=ym{imy1,imy2};
-        expy1_best(:,i)=my_best(3,i)*exp(-tj/lamday1_best(:,i));
-        expy2_best(:,i)=my_best(4,i)*exp(-tj/lamday1_best(:,i));
+        [~,imy1]=min(min(normy_list'));
+        [~,imy2]=min(normy_list(imy1,:));
+        lamday1_best{i}=lamda(imy1);
+        lamday2_best{i}=lamda(imy2);
+        normy_best{i}=normy_list(imy1,imy2);
+        my_best{i}=mj{imy1,imy2};
+        y_best{i}=ym{imy1,imy2};
+        expy1_best{i}=my_best{i}(3)*exp(-t2/lamday1_best{i});
+        expy2_best{i}=my_best{i}(4)*exp(-t2/lamday2_best{i});
                 
         %----- correct with exponential terms only and append to data segments
-        ecor=x-(expx1_best(:,i)+expx2_best(:,i)); % ecor=ecor+(eint(1)-ecor(end));
-        eint2=[ecor; eint];
-        tint2=[t; tint];
-        ncor=y-(expy1_best(:,i)+expy2_best(:,i)); % ncor=ncor+(nint(1)-ncor(end));
-        nint2=[ncor; nint];
+        ecor=eint-(expx1_best{i}+expx2_best{i});
+        ncor=nint-(expy1_best{i}+expy2_best{i});
         
         figure(34); clf;
         subplot(211); hold on
-        plot(tint2,eint2,'linewidth',1)
         plot(tint,eint,'linewidth',1)
-        xline(tint2(70))
+        plot(tint,ecor,'linewidth',1)
         datetick('x')
         subplot(212); hold on
-        plot(tint2,nint2,'linewidth',1)
         plot(tint,nint,'linewidth',1)
-        xline(tint2(70))
+        plot(tint,ncor,'linewidth',1)
         datetick('x')
 %         keyboard
         
-        eint=eint2(70:end);
-        nint=nint2(70:end);
-        tint=tint2(70:end);
+        eint=ecor(17:end);
+        nint=ncor(17:end);
+        tint=tint(17:end);
+        Tint=Tint(17:end);
         
         %substitute points during calibration and recovery with NaNs
         inan=flipstart_min(i-1)-ipre:flipstart_min(i-1)+ipost;
@@ -437,6 +426,94 @@ for i=1:length(flipstart_min)
             plot([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log_cor(1:end-1,2)) sum(cal_log_cor(:,2))],'ko--','linewidth',1)
             datetick
             title('after drift correction (Y)')
+            
+            % demonstrative stitching plot
+            if i==19
+                figure(8); clf;
+                subplot(311); hold on
+                plot(stitch_min.t(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre)),x,'r','linewidth',1)
+                plot(tint,eint,'b','linewidth',1)
+                datetick('x',6)
+                xtickangle(45)
+                ylabel('a_x (m/s^2)')
+                set(gca,'fontsize',12)
+                ylim([3.15e-3 3.3e-3])
+                xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.000005 -0.000005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'1 \mug','fontsize',12)
+                box on; grid on
+                subplot(312); hold on
+                plot(tint,eint,'b','linewidth',1)
+                plot([flipdate_min(i-1) flipdate_min(i)],[cal1.ax cal2.ax],'bo:','linewidth',1)
+                ylim([3.15e-3 3.3e-3])
+                ylabel('a_x (m/s^2)')
+                set(gca,'fontsize',12)
+                yyaxis right
+                plot([flipdate_min(i-1) flipdate_min(i)],[cal1.ax cal1.ax+(cal2.x_plus-cal1.x_plus)]+9.78975,'ks--','linewidth',1)
+                set(gca,'YColor','k')
+                datetick('x',6)
+                xtickangle(45)
+                ylabel('c_x (m/s^2)')
+                set(gca,'fontsize',12)
+                xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.000005 -0.000005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'1 \mug','fontsize',12)
+                box on; grid on
+                subplot(313); hold on
+                plot(tint,eint-xdrift*24*60*(tint-flipdate_min(i-1)),'color',[0.49 0.18 0.56],'linewidth',1)
+                plot([flipdate_min(i-1) flipdate_min(i)],[cal1.ax cal2.ax-(cal2.x_plus-cal1.x_plus)],'o:','color',[0.49 0.18 0.56],'linewidth',1)
+                datetick('x',6)
+                xtickangle(45)
+                ylabel('a_x (m/s^2)')
+                set(gca,'fontsize',12)
+                ylim([3.15e-3 3.165e-3])
+                xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.000005 -0.000005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'1 \mug','fontsize',12)
+                box on; grid on
+                
+                fh=gcf;
+                fh.PaperUnits='inches';
+                fh.PaperPosition=[0 0 8.5 11];
+                print('../longterm_tilt/PinonFlat/demonstrative_plots/x_stitch','-dtiff','-r300')
+            end
+            if i==20
+                figure(8)
+                subplot(311);
+                plot(stitch_min.t(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre)),x,'r','linewidth',1)
+                plot(tint,eint,'b','linewidth',1)
+                datetick('x',6)
+                xtickangle(45)
+                ylabel('a_x (m/s^2)')
+                set(gca,'fontsize',12)
+                ylim([3.15e-3 3.3e-3])
+                xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.000005 -0.000005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'1 \mug','fontsize',12)
+                box on; grid on
+                subplot(312);
+                plot(tint,eint,'b','linewidth',1)
+                plot([flipdate_min(i-1) flipdate_min(i)],[cal1.ax cal2.ax],'bo:','linewidth',1)
+                ylim([3.15e-3 3.3e-3])
+                ylabel('a_x (m/s^2)')
+                set(gca,'fontsize',12)
+                yyaxis right
+                plot([flipdate_min(i-1) flipdate_min(i)],[cal1.ax cal1.ax+(cal2.x_plus-cal1.x_plus)]+9.78975,'ks--','linewidth',1)
+                set(gca,'YColor','k')
+                datetick('x',6)
+                xtickangle(45)
+                ylabel('c_x (m/s^2)')
+                set(gca,'fontsize',12)
+                xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.000005 -0.000005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'1 \mug','fontsize',12)
+                box on; grid on
+                subplot(313);
+                plot(tint,eint-xdrift*24*60*(tint-flipdate_min(i-1))-0.003356+0.003163,'color',[0.49 0.18 0.56],'linewidth',1)
+                plot([flipdate_min(i-1) flipdate_min(i)],[cal1.ax cal2.ax-(cal2.x_plus-cal1.x_plus)]-0.003356+0.003163,'o:','color',[0.49 0.18 0.56],'linewidth',1)
+                datetick('x',6)
+                xtickangle(45)
+                ylabel('a_x (m/s^2)')
+                set(gca,'fontsize',12)
+                ylim([3.15e-3 3.165e-3])
+                xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.000005 -0.000005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'1 \mug','fontsize',12)
+                box on; grid on
+                
+                fh=gcf;
+                fh.PaperUnits='inches';
+                fh.PaperPosition=[0 0 8.5 11];
+                print('../longterm_tilt/PinonFlat/demonstrative_plots/x_stitch2','-dtiff','-r300')
+            end
         end
         
         % current cal gets stored as previous cal for next iteration

@@ -4,10 +4,10 @@
 
 %% Parameters
 % dataLoaded: 0 - need to load from raw files; 1 need to append to existing matlab file; 2 - already in memory
-dataLoaded = 0;
+dataLoaded = 2;
 
 % Start and end date
-startDate = datenum('10/18/18'); %daily flips begin 10/18/18
+startDate = datenum('10/18/18'); % daily flips begin 10/18/18
 endDate = floor(now-1);
 
 % Temperature sensitivity parameters
@@ -28,14 +28,14 @@ p.tCalLim = [60 90];            % Time limits for calibration in seconds since s
 
 %% Load Data
 
-% Empty matrices
-flipInfoAll = [];
-dataDec1 = [];
-dataDec100 = [];
-
 if dataLoaded == 0
+    % Empty matrices
+    flipInfoAll = [];
+    dataDec1 = [];
+    dataDec100 = [];
+
     for day = startDate:endDate
-        data = get_sctaDay('/Volumes/GoogleDrive/My Drive/Oceanography/SCTA-Share/OOI-PF/SCTA-PF/ParsedData',day);
+        data = get_sctaDay('/Users/erikfred/Google Drive/My Drive/Oceanography/SCTA-Share/OOI-PF/SCTA-PF/ParsedData',day);
         
         if isempty(data.t)
             
@@ -81,7 +81,7 @@ elseif dataLoaded==1
     startDate2=floor(dataDec1.t(end));
     
     for dayn = startDate2:endDate
-        data = get_sctaDay('/Volumes/GoogleDrive/My Drive/Oceanography/SCTA-Share/OOI-PF/SCTA-PF/ParsedData',dayn);
+        data = get_sctaDay('/Users/erikfred/Google Drive/My Drive/Oceanography/SCTA-Share/OOI-PF/SCTA-PF/ParsedData',dayn);
         
         if dayn==datenum(2020,02,06)
             keyboard
@@ -130,27 +130,35 @@ elseif dataLoaded==1
     
 end
 
+% identify and separate each of the calibrations
+inta=find(flipInfoAll.t<=datenum(2019,08,09));
+intb=find(flipInfoAll.t>datenum(2019,08,09));
+i_x=find(flipInfoAll.orientation==1);
+i_x1=i_x(1:2:end); i_x1a=intersect(i_x1,inta); i_x1b=intersect(i_x1,intb);
+i_x2=i_x(2:2:end); i_x2a=intersect(i_x2,inta); i_x2b=intersect(i_x2,intb);
+i_y=find(flipInfoAll.orientation==2);
+i_ya=intersect(i_y,inta); i_yb=intersect(i_y,intb);
+i_negx=find(flipInfoAll.orientation==-1);
+i_negy=find(flipInfoAll.orientation==-2);
+
 % Plot calibrations
-figure
-clf
-plot(flipInfoAll.t(1:3:60),flipInfoAll.gCal(1:3:60),'ok',flipInfoAll.t(1:3:60),flipInfoAll.gCalTCor(1:3:60),'xk','markersize',18);
-hold on
-plot(flipInfoAll.t(2:3:60),flipInfoAll.gCal(2:3:60),'or',flipInfoAll.t(2:3:60),flipInfoAll.gCalTCor(2:3:60),'xr','markersize',18);
-plot(flipInfoAll.t(3:3:60),flipInfoAll.gCal(3:3:60),'ob',flipInfoAll.t(3:3:60),flipInfoAll.gCalTCor(3:3:60),'xb','markersize',18);
-plot(flipInfoAll.t(65:5:end),flipInfoAll.gCal(65:5:end),'sk',flipInfoAll.t(65:5:end),flipInfoAll.gCalTCor(65:5:end),'+k','markersize',18);
-plot(flipInfoAll.t(63:5:end),flipInfoAll.gCal(63:5:end),'sr',flipInfoAll.t(63:5:end),flipInfoAll.gCalTCor(63:5:end),'+r','markersize',18);
-plot(flipInfoAll.t(65:5:end),(flipInfoAll.gCal(64:5:end)+flipInfoAll.gCal(65:5:end))/2,'^k',...
-    flipInfoAll.t(65:5:end),(flipInfoAll.gCalTCor(64:5:end)+flipInfoAll.gCalTCor(65:5:end))/2,'+k','markersize',18);
-plot(flipInfoAll.t(63:5:end),(flipInfoAll.gCal(62:5:end)+flipInfoAll.gCal(63:5:end))/2,'^r',...
-    flipInfoAll.t(63:5:end),(flipInfoAll.gCalTCor(62:5:end)+flipInfoAll.gCalTCor(63:5:end))/2,'+r','markersize',18);
-plot(flipInfoAll.t(61:5:end),flipInfoAll.gCal(61:5:end),'ok',flipInfoAll.t(61:5:end),flipInfoAll.gCalTCor(61:5:end),'xk','markersize',18);
-plot(flipInfoAll.t(62:5:end),flipInfoAll.gCal(62:5:end),'or',flipInfoAll.t(62:5:end),flipInfoAll.gCalTCor(62:5:end),'xr','markersize',18);
-plot(flipInfoAll.t(64:5:end),flipInfoAll.gCal(64:5:end),'ob',flipInfoAll.t(64:5:end),flipInfoAll.gCalTCor(64:5:end),'xb','markersize',18);
+figure; clf; hold on
+plot(flipInfoAll.t(i_x1),flipInfoAll.gCal(i_x1),'ok',flipInfoAll.t(i_x1),flipInfoAll.gCalTCor(i_x1),'xk','markersize',18);
+plot(flipInfoAll.t(i_x2),flipInfoAll.gCal(i_x2),'ob',flipInfoAll.t(i_x2),flipInfoAll.gCalTCor(i_x2),'xb','markersize',18);
+plot(flipInfoAll.t(i_y),flipInfoAll.gCal(i_y),'or',flipInfoAll.t(i_y),flipInfoAll.gCalTCor(i_y),'xr','markersize',18);
+plot(flipInfoAll.t(i_negx),flipInfoAll.gCal(i_negx),'sk',flipInfoAll.t(i_negx),flipInfoAll.gCalTCor(i_negx),'+k','markersize',18);
+plot(flipInfoAll.t(i_negy),flipInfoAll.gCal(i_negy),'sr',flipInfoAll.t(i_negy),flipInfoAll.gCalTCor(i_negy),'+r','markersize',18);
+plot(flipInfoAll.t(i_x1b),(flipInfoAll.gCal(i_x1b)+flipInfoAll.gCal(i_negx))/2,'^k',...
+    flipInfoAll.t(i_x1b),(flipInfoAll.gCalTCor(i_x1b)+flipInfoAll.gCalTCor(i_negx))/2,'+k','markersize',18);
+plot(flipInfoAll.t(i_x2b),(flipInfoAll.gCal(i_x2b)+flipInfoAll.gCal(i_negx))/2,'^b',...
+    flipInfoAll.t(i_x2b),(flipInfoAll.gCalTCor(i_x2b)+flipInfoAll.gCalTCor(i_negx))/2,'+b','markersize',18);
+plot(flipInfoAll.t(i_yb),(flipInfoAll.gCal(i_yb)+flipInfoAll.gCal(i_negy))/2,'^r',...
+    flipInfoAll.t(i_yb),(flipInfoAll.gCalTCor(i_yb)+flipInfoAll.gCalTCor(i_negy))/2,'+r','markersize',18);
 xl = xlim; yl = ylim;
 plot([0 0]+xl(1)+diff(xl)/10,mean(yl)+[0 0.0001],'-k')
 text(xl(1)+diff(xl)/9,mean(yl)+0.00005,'10^{-5} g')
-legend('1st X','1st X (T Corrected)','Y','Y (T Corrected)','2nd X','2nd X (T Corrected)','-X','-X (T Corrected)',...
-    '-Y','-Y (T Corrected)','X span','X span (T corrected)','Y span','Y span (T corrected)','location','best')
+legend('1st X','1st X (T Corrected)','2nd X','2nd X (T Corrected)','Y','Y (T Corrected)','-X','-X (T Corrected)',...
+    '-Y','-Y (T Corrected)','X1 span','X1 span (T corrected)','X2 span','X2 span (T corrected)','Y span','Y span (T corrected)','location','best')
 datetick
 title({'Pinon Flat SCTA Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
 xlabel('Date')
@@ -162,5 +170,145 @@ fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 11 8.5];
 print -djpeg ../calibrations/PinonFlat/process_PinonFlat.jpeg
 print -dtiff ../calibrations/PinonFlat/process_PinonFlat.tiff -r300
-!open ../calibrations/PinonFlat/process_PinonFlat.jpeg
 
+% Plot calibrations on separate axes
+figure
+subplot(311); hold on
+plot(flipInfoAll.t(i_x1),flipInfoAll.gCal(i_x1),'ko','markersize',12);
+plot(flipInfoAll.t(i_x2),flipInfoAll.gCal(i_x2),'ro','markersize',12);
+datetick('x',3)
+xtickangle(45)
+ylabel('+X (m/s^2)')
+title({'Pinon Flat SCTA X Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
+set(gca,'fontsize',12)
+ylim([9.7927 9.7942])
+xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 -0.0005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'100 \mug','fontsize',12)
+yyaxis right
+plot(dataDec100.t(dataDec100.t>=flipInfoAll.t(i_x1(1)) & dataDec100.t<=flipInfoAll.t(i_x1(end))),...
+    dataDec100.T(dataDec100.t>=flipInfoAll.t(i_x1(1)) & dataDec100.t<=flipInfoAll.t(i_x1(end))),'c','linewidth',1)
+xlim(xl)
+datetick('x',3,'keeplimits')
+xtickangle(45)
+ylabel(['T (' char(176) 'C)'])
+legend('X1','X2','location','northwest')
+set(gca,'fontsize',12)
+set(gca,'YColor','c')
+ylim([23.5 31])
+box on; grid on
+subplot(312); hold on
+plot(flipInfoAll.t(i_negx),-1*flipInfoAll.gCal(i_negx),'ks','markersize',12);
+xlim(xl)
+datetick('x',3,'keeplimits')
+xtickangle(45)
+ylabel('-X (m/s^2)')
+set(gca,'fontsize',12)
+ylim([-9.7933 -9.7918])
+xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 -0.0005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'100 \mug','fontsize',12)
+yyaxis right
+plot(dataDec100.t(dataDec100.t>=flipInfoAll.t(i_negx(1)) & dataDec100.t<=flipInfoAll.t(i_negx(end))),...
+    dataDec100.T(dataDec100.t>=flipInfoAll.t(i_negx(1)) & dataDec100.t<=flipInfoAll.t(i_negx(end))),'c','linewidth',1)
+xlim(xl)
+datetick('x',3,'keeplimits')
+xtickangle(45)
+ylabel(['T (' char(176) 'C)'])
+set(gca,'fontsize',12)
+set(gca,'YColor','c')
+ylim([23.5 31])
+box on; grid on
+subplot(313); hold on
+xspan1=(flipInfoAll.gCal(i_x1b)+flipInfoAll.gCal(i_negx));
+plot(flipInfoAll.t(i_x1b),xspan1-xspan1(1),'k^','markersize',12);
+xspan2=(flipInfoAll.gCal(i_x2b)+flipInfoAll.gCal(i_negx));
+plot(flipInfoAll.t(i_x2b),xspan2-xspan2(1),'r^','markersize',12);
+xlim(xl)
+datetick('x',3,'keeplimits')
+xtickangle(45)
+ylabel('\Delta X1 span (m/s^2)')
+set(gca,'fontsize',12)
+ylim([-0.00005 0.0001])
+xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
+yyaxis right
+plot(dataDec100.t(dataDec100.t>=flipInfoAll.t(i_negx(1)) & dataDec100.t<=flipInfoAll.t(i_negx(end))),...
+    dataDec100.T(dataDec100.t>=flipInfoAll.t(i_negx(1)) & dataDec100.t<=flipInfoAll.t(i_negx(end))),'c','linewidth',1)
+xlim(xl)
+datetick('x',3,'keeplimits')
+xtickangle(45)
+ylabel(['T (' char(176) 'C)'])
+legend('X1','X2','location','northwest')
+set(gca,'fontsize',12)
+set(gca,'YColor','c')
+ylim([27.5 30])
+box on; grid on
+
+fh=gcf;
+fh.PaperUnits='inches';
+fh.PaperPosition=[0 0 8.5 11];
+print('../calibrations/PinonFlat/process_PinonFlat_x_alt2','-dtiff','-r300')
+
+figure
+subplot(311); hold on
+plot(flipInfoAll.t(i_y),flipInfoAll.gCal(i_y),'ko','markersize',12);
+title({'Pinon Flat SCTA Y Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
+datetick('x',3)
+xtickangle(45)
+ylabel('+Y (m/s^2)')
+set(gca,'fontsize',12)
+ylim([9.7938 9.7953])
+xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 -0.0005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'100 \mug','fontsize',12)
+yyaxis right
+plot(dataDec100.t(dataDec100.t>=flipInfoAll.t(i_y(1)) & dataDec100.t<=flipInfoAll.t(i_y(end))),...
+    dataDec100.T(dataDec100.t>=flipInfoAll.t(i_y(1)) & dataDec100.t<=flipInfoAll.t(i_y(end))),'c','linewidth',1)
+xlim(xl)
+datetick('x',3,'keeplimits')
+xtickangle(45)
+ylabel(['T (' char(176) 'C)'])
+set(gca,'fontsize',12)
+set(gca,'YColor','c')
+ylim([23.5 31])
+box on; grid on
+subplot(312); hold on
+plot(flipInfoAll.t(i_negy),-1*flipInfoAll.gCal(i_negy),'ks','markersize',12);
+xlim(xl)
+datetick('x',3,'keeplimits')
+xtickangle(45)
+ylabel('-Y (m/s^2)')
+set(gca,'fontsize',12)
+ylim([-9.7920 -9.7905])
+xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 -0.0005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'100 \mug','fontsize',12)
+yyaxis right
+plot(dataDec100.t(dataDec100.t>=flipInfoAll.t(i_negy(1)) & dataDec100.t<=flipInfoAll.t(i_negy(end))),...
+    dataDec100.T(dataDec100.t>=flipInfoAll.t(i_negy(1)) & dataDec100.t<=flipInfoAll.t(i_negy(end))),'c','linewidth',1)
+xlim(xl)
+datetick('x',3,'keeplimits')
+xtickangle(45)
+ylabel(['T (' char(176) 'C)'])
+set(gca,'fontsize',12)
+set(gca,'YColor','c')
+ylim([23.5 31])
+box on; grid on
+subplot(313); hold on
+yspan=(flipInfoAll.gCal(i_yb)+flipInfoAll.gCal(i_negy));
+plot(flipInfoAll.t(i_yb),yspan-yspan(1),'k^','markersize',12);
+xlim(xl)
+datetick('x',3,'keeplimits')
+xtickangle(45)
+ylabel('\Delta Y span (m/s^2)')
+set(gca,'fontsize',12)
+ylim([-0.00005 0.0001])
+xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
+yyaxis right
+plot(dataDec100.t(dataDec100.t>=flipInfoAll.t(i_negy(1)) & dataDec100.t<=flipInfoAll.t(i_negy(end))),...
+    dataDec100.T(dataDec100.t>=flipInfoAll.t(i_negy(1)) & dataDec100.t<=flipInfoAll.t(i_negy(end))),'c','linewidth',1)
+xlim(xl)
+datetick('x',3,'keeplimits')
+xtickangle(45)
+ylabel(['T (' char(176) 'C)'])
+set(gca,'fontsize',12)
+set(gca,'YColor','c')
+ylim([27.5 30])
+box on; grid on
+
+fh=gcf;
+fh.PaperUnits='inches';
+fh.PaperPosition=[0 0 8.5 11];
+print('../calibrations/PinonFlat/process_PinonFlat_y_alt2','-dtiff','-r300')
