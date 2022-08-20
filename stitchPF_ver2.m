@@ -80,6 +80,7 @@ iend=length(stitch_min.t);
 
 cal_log_cor=[];
 transients=[];
+tempx=[]; tempy=[]; tempt=[];
 for i=1:length(flipstart_min)
     % specify samples to exclude around flip
     if i<=22 % 3-orientation sequence
@@ -396,6 +397,8 @@ for i=1:length(flipstart_min)
             datetick
             title('after drift correction (X)')
             
+            tempx=[tempx; eint-cal1.ax+sum(cal_log_cor(1:end-1,1))-xdrift*24*60*(tint-flipdate_min(i-1))];
+            
             figure(13)
             subplot(211)
             plot([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log_cor(1:end-1,2)) sum(cal_log_cor(:,2))],'ko:','linewidth',1)
@@ -426,6 +429,15 @@ for i=1:length(flipstart_min)
             plot([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log_cor(1:end-1,2)) sum(cal_log_cor(:,2))],'ko--','linewidth',1)
             datetick
             title('after drift correction (Y)')
+            
+            tempy=[tempy; nint-cal1.ay+sum(cal_log_cor(1:end-1,2))-ydrift*24*60*(tint-flipdate_min(i-1))];
+            tempt=[tempt; tint];
+            
+            figure(1)
+            subplot(211)
+            plot(tempt,tempx)
+            subplot(212)
+            plot(tempt,tempy)
             
             % demonstrative stitching plot
             if i==19
