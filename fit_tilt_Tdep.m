@@ -15,7 +15,7 @@ function [M] = fit_tilt_Tdep(time,accel,Temp,dTemp)
 %       y = a*(t') + b*(T') + [c*(dT')] + d + e*exp(-(t')/f)
 %
 
-model=0; % 0 - unique offsets allowed, 1 - unique slopes allowed, 2 - dT/dt dependence
+model=2; % 0 - unique offsets allowed, 1 - unique slopes allowed, 2 - dT/dt dependence
 
 % scale datenums better for inversions
 tstart=time{1}(1);
@@ -95,7 +95,7 @@ if model==0
             
             % invert for model perturbation
             if rcond(G_prime'*G_prime)<10^-16
-                keyboard
+%                 keyboard
             end
             dm_star=inv(G_prime'*G_prime)*G_prime'*(a_obs-a_star);
 %             dm_star=-dm_star/10;
@@ -103,10 +103,65 @@ if model==0
             dm_star=dm_star/2; %checking for overstep
         end
         
-        m_star2=m_star+[dm_star(1:5);dm_star(6)*10^-7];
-        if m_star2(6)<0 %ensures exponential decay
-            m_star2(6)=m_star(6)/100;
+        m_star2=m_star+[dm_star(1:5);dm_star(6)*10^7];
+        while m_star2(6)<0 %ensures exponential decay
+            dm_star(6)=dm_star(6)/2;
+            m_star2(6)=m_star(6)+dm_star(6)*10^7;
         end
+        
+%         % plots to see how scaling works
+%         figure(3); clf
+%         subplot(321); hold on
+%         plot(t_obs,a_obs-a_star)
+%         plot(t_obs,a_obs-(m_star2(1)*dyda+m_star(2)*dydb+m_star(3)*dydc1+...
+%             m_star(4)*dydc2+m_star(5)*exp(-t_obs/m_star(6))))
+%         subplot(322); hold on
+%         plot(t_obs,a_obs-a_star)
+%         plot(t_obs,a_obs-(m_star(1)*dyda+m_star2(2)*dydb+m_star(3)*dydc1+...
+%             m_star(4)*dydc2+m_star(5)*exp(-t_obs/m_star(6))))
+%         subplot(323); hold on
+%         plot(t_obs,a_obs-a_star)
+%         plot(t_obs,a_obs-(m_star(1)*dyda+m_star(2)*dydb+m_star2(3)*dydc1+...
+%             m_star(4)*dydc2+m_star(5)*exp(-t_obs/m_star(6))))
+%         subplot(324); hold on
+%         plot(t_obs,a_obs-a_star)
+%         plot(t_obs,a_obs-(m_star(1)*dyda+m_star(2)*dydb+m_star(3)*dydc1+...
+%             m_star2(4)*dydc2+m_star(5)*exp(-t_obs/m_star(6))))
+%         subplot(325); hold on
+%         plot(t_obs,a_obs-a_star)
+%         plot(t_obs,a_obs-(m_star(1)*dyda+m_star(2)*dydb+m_star(3)*dydc1+...
+%             m_star(4)*dydc2+m_star2(5)*exp(-t_obs/m_star(6))))
+%         subplot(326); hold on
+%         plot(t_obs,a_obs-a_star)
+%         plot(t_obs,a_obs-(m_star(1)*dyda+m_star(2)*dydb+m_star(3)*dydc1+...
+%             m_star(4)*dydc2+m_star(5)*exp(-t_obs/m_star2(6))))
+%         % viewed the other way around
+%         figure(4); clf
+%         subplot(321); hold on
+%         plot(t_obs,a_obs-a_star)
+%         plot(t_obs,a_obs-(m_star(1)*dyda+m_star2(2)*dydb+m_star2(3)*dydc1+...
+%             m_star2(4)*dydc2+m_star2(5)*exp(-t_obs/m_star2(6))))
+%         subplot(322); hold on
+%         plot(t_obs,a_obs-a_star)
+%         plot(t_obs,a_obs-(m_star2(1)*dyda+m_star(2)*dydb+m_star2(3)*dydc1+...
+%             m_star2(4)*dydc2+m_star2(5)*exp(-t_obs/m_star2(6))))
+%         subplot(323); hold on
+%         plot(t_obs,a_obs-a_star)
+%         plot(t_obs,a_obs-(m_star2(1)*dyda+m_star2(2)*dydb+m_star(3)*dydc1+...
+%             m_star2(4)*dydc2+m_star2(5)*exp(-t_obs/m_star2(6))))
+%         subplot(324); hold on
+%         plot(t_obs,a_obs-a_star)
+%         plot(t_obs,a_obs-(m_star2(1)*dyda+m_star2(2)*dydb+m_star2(3)*dydc1+...
+%             m_star(4)*dydc2+m_star2(5)*exp(-t_obs/m_star2(6))))
+%         subplot(325); hold on
+%         plot(t_obs,a_obs-a_star)
+%         plot(t_obs,a_obs-(m_star2(1)*dyda+m_star2(2)*dydb+m_star2(3)*dydc1+...
+%             m_star2(4)*dydc2+m_star(5)*exp(-t_obs/m_star2(6))))
+%         subplot(326); hold on
+%         plot(t_obs,a_obs-a_star)
+%         plot(t_obs,a_obs-(m_star2(1)*dyda+m_star2(2)*dydb+m_star2(3)*dydc1+...
+%             m_star2(4)*dydc2+m_star2(5)*exp(-t_obs/m_star(6))))
+%         keyboard
         
         a_star2=G_lin*m_star2(1:4)+m_star2(5)*exp(-t_obs/m_star2(6));
         
@@ -114,7 +169,7 @@ if model==0
         disp('new misfit:')
         disp(new_norm)
         
-        if new_norm>norm_check
+        if new_norm>=norm_check
             if count<25
                 redo=true;
                 count=count+1;
@@ -271,9 +326,10 @@ elseif model==1
             dm_star=dm_star/2; %checking for overstep
         end
         
-        m_star2=m_star+[dm_star(1:6);dm_star(7)*10^-7];
-        if m_star2(7)<0 %ensures exponential decay
-            m_star2(7)=m_star(7)/100;
+        m_star2=m_star+[dm_star(1:6);dm_star(7)*10^7];
+        while m_star2(7)<0 %ensures exponential decay
+            dm_star(7)=dm_star(7)/2;
+            m_star2(7)=m_star(7)+dm_star(7)*10^7;
         end
         
         a_star2=G_lin*m_star2(1:5)+m_star2(6)*exp(-t_obs/m_star2(7));
@@ -445,10 +501,10 @@ elseif model==2
             dm_star=dm_star/2; %checking for overstep
         end
         
-        m_star2=m_star+[dm_star(1:7);dm_star(8)*10^-7];
+        m_star2=m_star+[dm_star(1:7);dm_star(8)*10^7];
         if m_star2(8)<0 %ensures exponential decay
-            keyboard
-%             m_star2(8)=m_star(8)/100;
+            dm_star(8)=dm_star(8)/2;
+            m_star2(8)=m_star(8)+dm_star(8)*10^7;
         end
         
         a_star2=G_lin*m_star2(1:6)+m_star2(7)*exp(-t_obs/m_star2(8));

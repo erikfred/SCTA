@@ -272,97 +272,109 @@ print(['../calibrations/Axial/process_Axial' suffix],'-dtiff','-r300')
 
 % Plot calibrations on separate axes
 if strcmp(suffix,'_newloc')
+    i_x1=i_x([1:2:end-6 end-3:2:end]); i_x1b=i_x(116);
+    i_x2=i_x(2:2:end);
+    i_xneg=i_negx([1:end-13 end-11:end]); i_xnegb=i_negx(48);
+    
     figure
     subplot(311); hold on
-    plot(flipInfoAll.t(i_x([1:2:end-6 end-3:2:end])),flipInfoAll.gCal(i_x([1:2:end-6 end-3:2:end])),'ko','markersize',12);
+    plot(flipInfoAll.t(i_x1),flipInfoAll.gCal(i_x1),'ko','markersize',12);
     datetick('x',3)
     xtickangle(45)
     ylabel('+X1 (m/s^2)')
     set(gca,'fontsize',12)
     ylim([9.81185 9.81205])
-    xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
+%     xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
     yyaxis right
-    plot(flipInfoAll.t(i_x(2:2:end)),flipInfoAll.gCal(i_x(2:2:end)),'ro','markersize',12);
-    title({'Axial SCTA X Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
+    plot(flipInfoAll.t(i_x2),flipInfoAll.gCal(i_x2),'ro','markersize',12);
+%     title({'Axial SCTA X Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
     datetick('x',3)
     xtickangle(45)
     ylabel('+X2 (m/s^2)')
     set(gca,'fontsize',12)
     set(gca,'YColor','r')
     ylim([9.81215 9.81215+0.0002])
+    xline(flipInfoAll.t(i_x1b),'k:','linewidth',2)
     box on; grid on
     subplot(312); hold on
-    plot(flipInfoAll.t(i_negx([1:end-13 end-11:end])),-1*flipInfoAll.gCal(i_negx([1:end-13 end-11:end])),'ks','markersize',12);
+    plot(flipInfoAll.t(i_xneg),-1*flipInfoAll.gCal(i_xneg),'ks','markersize',12);
     datetick('x',3)
     xtickangle(45)
     ylabel('-X (m/s^2)')
     set(gca,'fontsize',12)
     ylim([-9.809 -9.8088])
-    xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
+    xline(flipInfoAll.t(i_xnegb),'k:','linewidth',2)
+%     xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
     box on; grid on
     subplot(313); hold on
-    xspan1=(flipInfoAll.gCal(i_xb([1:2:end-26 end-23:2:end-6 end-3:2:end]))+flipInfoAll.gCal(i_negx([1:end-13 end-11:end-3 end-1:end])));
-    plot(flipInfoAll.t(i_xb([1:2:end-26 end-23:2:end-6 end-3:2:end])),xspan1-xspan1(1),'k^','markersize',12);
+    xspan1=(flipInfoAll.gCal(intersect(i_x1,i_xneg-4))+flipInfoAll.gCal(intersect(i_x1+4,i_xneg)));
+    plot(flipInfoAll.t(intersect(i_x1,i_xneg-4)),xspan1-xspan1(1),'k^','markersize',12);
     datetick('x',3)
     xtickangle(45)
     ylabel('\Delta X1 span (m/s^2)')
     set(gca,'fontsize',12)
     ylim([0 0.00004])
     yyaxis right
-    xspan2=(flipInfoAll.gCal(i_xb(2:2:end))+flipInfoAll.gCal(i_negx));
-    plot(flipInfoAll.t(i_xb(2:2:end)),xspan2-xspan2(1),'r^','markersize',12);
+    xspan2=(flipInfoAll.gCal(intersect(i_x2,i_xneg-1))+flipInfoAll.gCal(intersect(i_x2+1,i_xneg)));
+    plot(flipInfoAll.t(intersect(i_x2,i_xneg-1)),xspan2-xspan2(1),'r^','markersize',12);
     datetick('x',3)
     xtickangle(45)
     ylabel('\Delta X2 span (m/s^2)')
     set(gca,'fontsize',12)
     set(gca,'YColor','r')
     ylim([0 0.00004])
-    xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)+[0 0.00001],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl)+0.00000,'1 \mug','fontsize',12)
+    xline(flipInfoAll.t(i_x1b),'k:','linewidth',2)
+    xline(flipInfoAll.t(i_xnegb),'k:','linewidth',2)
+%     xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)+[0 0.00001],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl)+0.00000,'1 \mug','fontsize',12)
     box on; grid on
     
     fh=gcf;
     fh.PaperUnits='inches';
     fh.PaperPosition=[0 0 8.5 11];
-    print(['../calibrations/Axial/process_Axial' suffix '_x_alt2'],'-dtiff','-r300')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_x'],'-dtiff','-r300')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_x'],'-depsc','-painters')
+    
+    i_y1=i_y;
+    i_yneg=i_negy([1:36 38:end]); i_ynegb=i_negy(37);
     
     figure
     subplot(311); hold on
-    plot(flipInfoAll.t(i_y),flipInfoAll.gCal(i_y),'ko','markersize',12);
-    title({'Axial SCTA Y Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
+    plot(flipInfoAll.t(i_y1),flipInfoAll.gCal(i_y1),'ko','markersize',12);
+%     title({'Axial SCTA Y Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
     datetick('x',3)
     xtickangle(45)
     ylabel('+Y (m/s^2)')
     set(gca,'fontsize',12)
     ylim([9.8111 9.8115])
-    % ylim([9.8111 9.8111+0.00065])
-    xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
+%     xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
     box on; grid on
     subplot(312); hold on
-    plot(flipInfoAll.t(i_negy([1:36 38:end])),-1*flipInfoAll.gCal(i_negy([1:36 38:end])),'ks','markersize',12);
+    plot(flipInfoAll.t(i_yneg),-1*flipInfoAll.gCal(i_yneg),'ks','markersize',12);
     datetick('x',3)
     xtickangle(45)
     ylabel('-Y (m/s^2)')
     set(gca,'fontsize',12)
     ylim([-9.8111 -9.8107])
-    % ylim([9.8107-0.0002 9.8107+0.00045])
-    xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
+    xline(flipInfoAll.t(i_ynegb),'k:','linewidth',2)
+%     xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
     box on; grid on
     subplot(313); hold on
-    yspan=(flipInfoAll.gCal(i_yb([1:36 38:end]))+flipInfoAll.gCal(i_negy([1:36 38:end])));
-    plot(flipInfoAll.t(i_yb([1:36 38:end])),yspan-yspan(1),'k^','markersize',12);
+    yspan=(flipInfoAll.gCal(intersect(i_y1,i_yneg-1))+flipInfoAll.gCal(intersect(i_y1+1,i_yneg)));
+    plot(flipInfoAll.t(intersect(i_y1,i_yneg-1)),yspan-yspan(1),'k^','markersize',12);
     datetick('x',3)
     xtickangle(45)
     ylabel('\Delta Y span (m/s^2)')
     set(gca,'fontsize',12)
     ylim([0 0.00004])
-    % ylim([9.811085 9.811085+0.00008125])
-    xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0 -0.00001],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'1 \mug','fontsize',12)
+    xline(flipInfoAll.t(i_ynegb),'k:','linewidth',2)
+%     xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0 -0.00001],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'1 \mug','fontsize',12)
     box on; grid on
     
     fh=gcf;
     fh.PaperUnits='inches';
     fh.PaperPosition=[0 0 8.5 11];
-    print(['../calibrations/Axial/process_Axial' suffix '_y_alt2'],'-dtiff','-r300')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_y'],'-dtiff','-r300')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_y'],'-depsc','-painters')
 elseif strcmp(suffix,'')
     figure
     subplot(311); hold on
@@ -418,7 +430,8 @@ elseif strcmp(suffix,'')
     fh=gcf;
     fh.PaperUnits='inches';
     fh.PaperPosition=[0 0 8.5 11];
-    print(['../calibrations/Axial/process_Axial' suffix '_x_alt2'],'-dtiff','-r300')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_x'],'-dtiff','-r300')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_x'],'-depsc','-painters')
     
     figure
     subplot(311); hold on
@@ -456,5 +469,6 @@ elseif strcmp(suffix,'')
     fh=gcf;
     fh.PaperUnits='inches';
     fh.PaperPosition=[0 0 8.5 11];
-    print(['../calibrations/Axial/process_Axial' suffix '_y_alt2'],'-dtiff','-r300')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscipt_y'],'-dtiff','-r300')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscipt_y'],'-depsc','-painters')
 end

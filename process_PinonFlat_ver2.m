@@ -179,18 +179,18 @@ plot(flipInfoAll.t(i_x2),flipInfoAll.gCal(i_x2),'ro','markersize',12);
 datetick('x',3)
 xtickangle(45)
 ylabel('+X (m/s^2)')
-title({'Pinon Flat SCTA X Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
+% title({'Pinon Flat SCTA X Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
 set(gca,'fontsize',12)
 ylim([9.7927 9.7942])
-xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 -0.0005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'100 \mug','fontsize',12)
+% xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 -0.0005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'100 \mug','fontsize',12)
 yyaxis right
 plot(dataDec100.t(dataDec100.t>=flipInfoAll.t(i_x1(1)) & dataDec100.t<=flipInfoAll.t(i_x1(end))),...
     dataDec100.T(dataDec100.t>=flipInfoAll.t(i_x1(1)) & dataDec100.t<=flipInfoAll.t(i_x1(end))),'c','linewidth',1)
-xlim(xl)
 datetick('x',3,'keeplimits')
+xl=xlim;
 xtickangle(45)
 ylabel(['T (' char(176) 'C)'])
-legend('X1','X2','location','northwest')
+legend('X1','X2','T','location','northwest')
 set(gca,'fontsize',12)
 set(gca,'YColor','c')
 ylim([23.5 31])
@@ -203,11 +203,11 @@ xtickangle(45)
 ylabel('-X (m/s^2)')
 set(gca,'fontsize',12)
 ylim([-9.7933 -9.7918])
-xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 -0.0005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'100 \mug','fontsize',12)
+% xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 -0.0005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'100 \mug','fontsize',12)
 yyaxis right
 plot(dataDec100.t(dataDec100.t>=flipInfoAll.t(i_negx(1)) & dataDec100.t<=flipInfoAll.t(i_negx(end))),...
     dataDec100.T(dataDec100.t>=flipInfoAll.t(i_negx(1)) & dataDec100.t<=flipInfoAll.t(i_negx(end))),'c','linewidth',1)
-xlim(xl)
+% xlim(xl)
 datetick('x',3,'keeplimits')
 xtickangle(45)
 ylabel(['T (' char(176) 'C)'])
@@ -226,7 +226,7 @@ xtickangle(45)
 ylabel('\Delta X1 span (m/s^2)')
 set(gca,'fontsize',12)
 ylim([-0.00005 0.0001])
-xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
+% xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
 yyaxis right
 plot(dataDec100.t(dataDec100.t>=flipInfoAll.t(i_negx(1)) & dataDec100.t<=flipInfoAll.t(i_negx(end))),...
     dataDec100.T(dataDec100.t>=flipInfoAll.t(i_negx(1)) & dataDec100.t<=flipInfoAll.t(i_negx(end))),'c','linewidth',1)
@@ -243,24 +243,25 @@ box on; grid on
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 8.5 11];
-print('../calibrations/PinonFlat/process_PinonFlat_x_alt2','-dtiff','-r300')
+print('../calibrations/PinonFlat/process_PinonFlat_manuscript_x','-dtiff','-r300')
+print('../calibrations/PinonFlat/process_PinonFlat_manuscript_x','-depsc','-painters')
 
 figure
 subplot(311); hold on
 plot(flipInfoAll.t(i_y),flipInfoAll.gCal(i_y),'ko','markersize',12);
-title({'Pinon Flat SCTA Y Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
+% title({'Pinon Flat SCTA Y Calibrations',[datestr(startDate,'mmm dd, yyyy') ' - ' datestr(endDate,'mmm dd, yyyy')]})
 datetick('x',3)
 xtickangle(45)
 ylabel('+Y (m/s^2)')
 set(gca,'fontsize',12)
 ylim([9.7938 9.7953])
-xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 -0.0005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'100 \mug','fontsize',12)
+% xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 -0.0005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'100 \mug','fontsize',12)
 yyaxis right
 plot(dataDec100.t(dataDec100.t>=flipInfoAll.t(i_y(1)) & dataDec100.t<=flipInfoAll.t(i_y(end))),...
     dataDec100.T(dataDec100.t>=flipInfoAll.t(i_y(1)) & dataDec100.t<=flipInfoAll.t(i_y(end))),'c','linewidth',1)
-xlim(xl)
 datetick('x',3,'keeplimits')
 xtickangle(45)
+xl=xlim;
 ylabel(['T (' char(176) 'C)'])
 set(gca,'fontsize',12)
 set(gca,'YColor','c')
@@ -274,7 +275,7 @@ xtickangle(45)
 ylabel('-Y (m/s^2)')
 set(gca,'fontsize',12)
 ylim([-9.7920 -9.7905])
-xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 -0.0005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'100 \mug','fontsize',12)
+% xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.0005 -0.0005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'100 \mug','fontsize',12)
 yyaxis right
 plot(dataDec100.t(dataDec100.t>=flipInfoAll.t(i_negy(1)) & dataDec100.t<=flipInfoAll.t(i_negy(end))),...
     dataDec100.T(dataDec100.t>=flipInfoAll.t(i_negy(1)) & dataDec100.t<=flipInfoAll.t(i_negy(end))),'c','linewidth',1)
@@ -295,7 +296,7 @@ xtickangle(45)
 ylabel('\Delta Y span (m/s^2)')
 set(gca,'fontsize',12)
 ylim([-0.00005 0.0001])
-xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
+% xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
 yyaxis right
 plot(dataDec100.t(dataDec100.t>=flipInfoAll.t(i_negy(1)) & dataDec100.t<=flipInfoAll.t(i_negy(end))),...
     dataDec100.T(dataDec100.t>=flipInfoAll.t(i_negy(1)) & dataDec100.t<=flipInfoAll.t(i_negy(end))),'c','linewidth',1)
@@ -311,4 +312,5 @@ box on; grid on
 fh=gcf;
 fh.PaperUnits='inches';
 fh.PaperPosition=[0 0 8.5 11];
-print('../calibrations/PinonFlat/process_PinonFlat_y_alt2','-dtiff','-r300')
+print('../calibrations/PinonFlat/process_PinonFlat_manuscript_y','-dtiff','-r300')
+print('../calibrations/PinonFlat/process_PinonFlat_manuscript_y','-depsc','-painters')

@@ -383,9 +383,9 @@ else
                 G_prime=cat(2,G_prime,dAde1,dAdf1);
             else
                 dAde1=exp(-time{1}/m_star(e_ind+1));
-                dAdf1=10^4*m_star(e_ind)*time{1}/m_star(e_ind+1)^2.*exp(-time{1}/m_star(e_ind+1));
+                dAdf1=m_star(e_ind)*time{1}/m_star(e_ind+1)^2.*exp(-time{1}/m_star(e_ind+1));
                 
-                G_prime=cat(2,G_prime,dAde1,dAdf1);
+                G_prime=cat(2,G_prime,dAde1,dAdf1*10^7);
             end
             
             %setup inverse problem
@@ -395,9 +395,10 @@ else
             dm_star=dm_star/2; %checking for overstep
         end
         
-        m_star2=m_star+dm_star;
-        if m_star2(e_ind+1)<0 %ensures exponential decay
-            m_star2(e_ind+1)=m_star(e_ind+1)/100;
+        m_star2=m_star+[dm_star(1:end-1); dm_star(end)*10^7];
+        while m_star2(e_ind+1)<0 %ensures exponential decay
+            dm_star(e_ind+1)=dm_star(e_ind+1)/2;
+            m_star2(e_ind+1)=m_star(e_ind+1)+dm_star(e_ind+1);
         end
         if num_ind==4
             if m_star2(e_ind+3)<0 %ensures exponential decay

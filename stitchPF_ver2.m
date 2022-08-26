@@ -1,4 +1,4 @@
-% stitchPF_ver2.m
+function [tout,xout,yout,Tout,T2out]=stitchPF_ver2
 %
 % Stitches together inter-calibration segments from decimated 40Hz data
 % stream, removing offsets and applying calibrations.
@@ -25,10 +25,18 @@ xcals=flipInfoAll.gCal(ix);
 iy=[2:3:59,62:5:length(flipInfoAll.t)]';
 ycals=flipInfoAll.gCal(iy);
 
+load('../corcals_temp_x.mat')
+xcals=corcals;
+load('../corcals_temp_y.mat')
+ycals=corcals;
+
 lindrift=false; % if false, calculates drift independently each interval
 interpolate=0; % 1 to interpolate between calibrations (original), 0 to extrapolate data out (William's)
 
 stitch_method=1; % 0: interpolation and best fit, 1: inversion
+
+excluded=[1;1;1;1;1;1;100;100;50;1;1;100;1;1;1;100;...
+    1;1;1;1;100;50;50;100;50;100;50;50;100;100;50;50;50]; % empirically determined deviations from expected transient behavior
 
 %%% END CONFIG %%%
 
@@ -53,9 +61,7 @@ if exist('../calibrations/PinonFlat/PFstitch_hr.mat','file') && ...
     stitch_min.MNZ=[stitch_min.MNZ; data_min.MNZ(i0:end)];
     stitch_min.MKA=[stitch_min.MKA; data_min.MKA(i0:end)];
     stitch_min.iflip=[stitch_min.iflip; data_min.iflip(i0:end)];
-else
-    i0=1;
-    
+else    
     stitch_hr=data_hr;
     stitch_min=data_min;
     
@@ -76,60 +82,156 @@ flipstart_min=stitch_min.iflip(iflipstart_min);
 flipstart_min=[flipstart_min(1:15);178253;flipstart_min(16:end)]; % manually add segment start after connection loss
 flipdate_min=stitch_min.t(flipstart_min); %datenums of flips for reference
 
-iend=length(stitch_min.t);
-
 cal_log_cor=[];
-transients=[];
-tempx=[]; tempy=[]; tempt=[];
+tempx=[]; tempy=[]; tempt=[]; tempT=[]; tempT2=[];
 for i=1:length(flipstart_min)
     % specify samples to exclude around flip
     if i<=22 % 3-orientation sequence
-        ipost=22; % empirically determined, when signal stabalizes
+        ipost=90; %22; % empirically determined, when signal stabalizes
         ipre=8; % avoids issues when flip starts slightly earlier than expected
     else % 5-orientation sequence
-        ipost=26; % empirically determined, when signal stabalizes
+        ipost=94; %26; % empirically determined, when signal stabalizes
         ipre=4; % avoids issues when flip starts slightly earlier than expected
     end
-    
-    % specify presumed transient duration
-    itran=100;
             
     if i==1
         eint=stitch_min.MNE(1:flipstart_min(i)-(ipre+1));
         nint=stitch_min.MNN(1:flipstart_min(i)-(ipre+1));
         Tint=stitch_min.MKA(1:flipstart_min(i)-(ipre+1));
         tint=stitch_min.t(1:flipstart_min(i)-(ipre+1));
+                
+        %----- fit initial transient to exp + exp + lin
+        if length(eint)>5000
+            x=eint(1:5000);
+            y=nint(1:5000);
+        else
+            x=eint;
+            y=nint;
+        end
+        t2=linspace(0,1,length(x))';
+        lamda=(1:1000)*t2(2); % time constant in minutes
         
-        transients(i).t=zeros(size([ipre:ipost]'));
-        transients(i).x=zeros(size([ipre:ipost]'));
-        transients(i).y=zeros(size([ipre:ipost]'));
-        transients(i).T=zeros(size([ipre:ipost]'));
-        transients(i).x_cor=transients(i).x;
-        transients(i).y_cor=transients(i).y;
+        %-- X
+        normx_list=[];
+        for k=1:length(lamda)
+            gexp2=exp(-t2/lamda(k));
+            %construct matrix for inversion
+            Gj=[t2,ones(size(t2)),gexp2];
+            if rcond(Gj'*Gj)<10^-15 || isnan(rcond(Gj'*Gj))
+                keyboard
+            end
+            mj{k}=inv(Gj'*Gj)*Gj'*x;
+            xm{k}=Gj*mj{k};
+            normx_list(k)=norm(x-xm{k});
+        end
+        
+        [~,imx2]=min(normx_list);
+        lamdax2_best{i}=lamda(imx2);
+        normx_best{i}=normx_list(imx2);
+        mx_best{i}=mj{imx2};
+        x_best{i}=xm{imx2};
+        expx2_best{i}=mx_best{i}(3)*exp(-t2/lamdax2_best{i});
+        
+        %-- Y
+        normy_list=[];
+        for k=1:length(lamda)
+            gexp2=exp(-t2/lamda(k));
+            %construct matrix for inversion
+            Gj=[t2,ones(size(t2)),gexp2];
+            if rcond(Gj'*Gj)<10^-15 || isnan(rcond(Gj'*Gj))
+                keyboard
+            end
+            mj{k}=inv(Gj'*Gj)*Gj'*y;
+            ym{k}=Gj*mj{k};
+            normy_list(k)=norm(y-ym{k});
+        end
+        
+        [~,imy2]=min(normy_list);
+        lamday2_best{i}=lamda(imy2);
+        normy_best{i}=normy_list(imy2);
+        my_best{i}=mj{imy2};
+        y_best{i}=ym{imy2};
+        expy2_best{i}=my_best{i}(3)*exp(-t2/lamday2_best{i});
+                
+        %----- correct with exponential terms only and append to data segments
+        if length(eint)>5000
+            ecor=eint; ecor(1:5000)=ecor(1:5000)-(expx2_best{i});
+            ncor=nint; ncor(1:5000)=ncor(1:5000)-(expy2_best{i});
+        else
+            ecor=eint-(expx2_best{i});
+            ncor=nint-(expy2_best{i});
+        end
         
     elseif i==16
         eint=stitch_min.MNE(flipstart_min(i-1)+(ipost+1):171394);
         nint=stitch_min.MNN(flipstart_min(i-1)+(ipost+1):171394);
         Tint=stitch_min.MKA(flipstart_min(i-1)+(ipost+1):171394);
         tint=stitch_min.t(flipstart_min(i-1)+(ipost+1):171394);
+                
+        %----- fit initial transient to exp + exp + lin
+        if length(eint)>5000
+            x=eint(1:5000);
+            y=nint(1:5000);
+        else
+            x=eint;
+            y=nint;
+        end
+        t2=linspace(0,1,length(x))';
+        lamda=(1:1000)*t2(2); % time constant in minutes
         
-        transients(i).t=stitch_min.t(flipstart_min(i-1):flipstart_min(i-1)+ipost);
-        transients(i).x=stitch_min.MNE(flipstart_min(i-1):flipstart_min(i-1)+ipost);
-        transients(i).y=stitch_min.MNN(flipstart_min(i-1):flipstart_min(i-1)+ipost);
-        transients(i).T=stitch_min.MKA(flipstart_min(i-1):flipstart_min(i-1)+ipost);
+        %-- X
+        normx_list=[];
+        for k=1:length(lamda)
+            gexp2=exp(-t2/lamda(k));
+            %construct matrix for inversion
+            Gj=[t2,ones(size(t2)),gexp2];
+            if rcond(Gj'*Gj)<10^-15 || isnan(rcond(Gj'*Gj))
+                keyboard
+            end
+            mj{k}=inv(Gj'*Gj)*Gj'*x;
+            xm{k}=Gj*mj{k};
+            normx_list(k)=norm(x-xm{k});
+        end
         
-        %determine linear fit, subtract from transients
-        px=polyfit([1:length(eint)]',eint,1);
-        transients(i).x_cor=transients(i).x-px(1)*[1:length(transients(i).x)]';
-        py=polyfit([1:length(nint)]',nint,1);
-        transients(i).y_cor=transients(i).y-py(1)*[1:length(transients(i).y)]';
-%         px=polyfit([1:100]',transients(i).x(end-99:end),1);
-%         transients(i).x_cor2=transients(i).x-px(1)*[1:length(transients(i).x)]';
-%         py=polyfit([1:100]',transients(i).y(end-99:end),1);
-%         transients(i).y_cor2=transients(i).y-py(1)*[1:length(transients(i).y)]';
+        [~,imx2]=min(normx_list);
+        lamdax2_best{i}=lamda(imx2);
+        normx_best{i}=normx_list(imx2);
+        mx_best{i}=mj{imx2};
+        x_best{i}=xm{imx2};
+        expx2_best{i}=mx_best{i}(3)*exp(-t2/lamdax2_best{i});
+        
+        %-- Y
+        normy_list=[];
+        for k=1:length(lamda)
+            gexp2=exp(-t2/lamda(k));
+            %construct matrix for inversion
+            Gj=[t2,ones(size(t2)),gexp2];
+            if rcond(Gj'*Gj)<10^-15 || isnan(rcond(Gj'*Gj))
+                keyboard
+            end
+            mj{k}=inv(Gj'*Gj)*Gj'*y;
+            ym{k}=Gj*mj{k};
+            normy_list(k)=norm(y-ym{k});
+        end
+        
+        [~,imy2]=min(normy_list);
+        lamday2_best{i}=lamda(imy2);
+        normy_best{i}=normy_list(imy2);
+        my_best{i}=mj{imy2};
+        y_best{i}=ym{imy2};
+        expy2_best{i}=my_best{i}(3)*exp(-t2/lamday2_best{i});
+                
+        %----- correct with exponential terms only and append to data segments
+        if length(eint)>5000
+            ecor=eint; ecor(1:5000)=ecor(1:5000)-(expx2_best{i});
+            ncor=nint; ncor(1:5000)=ncor(1:5000)-(expy2_best{i});
+        else
+            ecor=eint-(expx2_best{i});
+            ncor=nint-(expy2_best{i});
+        end
         
         %substitute points during calibration and recovery with NaNs
-        inan=flipstart_min(i-1)-ipre:flipstart_min(i-1)+ipost;
+        inan=flipstart_min(i-1)-ipre:flipstart_min(i-1)+ipost-1;
         stitch_min.MNE(inan)=nan;
         stitch_min.MNN(inan)=nan;
         stitch_min.MNZ(inan)=nan;
@@ -139,143 +241,113 @@ for i=1:length(flipstart_min)
         nint=stitch_min.MNN(178253:flipstart_min(i)-(ipre+1));
         Tint=stitch_min.MKA(178253:flipstart_min(i)-(ipre+1));
         tint=stitch_min.t(178253:flipstart_min(i)-(ipre+1));
-        
-        transients(i).t=zeros(size([ipre:ipost]'));
-        transients(i).x=zeros(size([ipre:ipost]'));
-        transients(i).y=zeros(size([ipre:ipost]'));
-        transients(i).T=zeros(size([ipre:ipost]'));
-        transients(i).x_cor=transients(i).x;
-        transients(i).y_cor=transients(i).y;
-        
+                
         %substitute limited intervening points with NaNs
         inan=171395:178252;
         stitch_min.MNE(inan)=nan;
         stitch_min.MNN(inan)=nan;
         stitch_min.MNZ(inan)=nan;
         stitch_min.MKA(inan)=nan;
+        
+        ecor=eint;
+        ncor=nint;
     else
         eint=stitch_min.MNE(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre));
         nint=stitch_min.MNN(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre));
         Tint=stitch_min.MKA(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre));
         tint=stitch_min.t(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre));
         
-%         % determine linear fit, subtract out for transient fitting
-%         px=polyfit((itran:length(eint))',eint(itran:length(eint)),1);
-%         eint2=eint-polyval(px,(1:length(eint))');
-%         py=polyfit((itran:length(nint))',nint(itran:length(nint)),1);
-%         nint2=nint-polyval(py,(1:length(nint))');
+        % fix gaps as needed
+        [tint,eint,nint,Tint]=fix_gaps(tint,eint,nint,Tint,i);
 
         %----- fit initial transient to exp + exp + lin
-        x=eint;
-        y=nint;
+        if length(eint)>5000
+            x=eint(1:5000);
+            y=nint(1:5000);
+        else
+            x=eint;
+            y=nint;
+        end
         t2=linspace(0,1,length(x))';
         lamda=(1:1000)*t2(2); % time constant in minutes
         
         %-- X
         normx_list=[];
-        for j=1:20
-            gexp1=exp(-t2/lamda(j));
-            for k=1:length(lamda)
-                if k==j
-                    normx_list(j,k)=1;
-                    continue
-                end
-                gexp2=exp(-t2/lamda(k));
-                %construct matrix for inversion
-                Gj=[t2,ones(size(t2)),gexp1,gexp2];
-                if rcond(Gj'*Gj)<10^-15 || isnan(rcond(Gj'*Gj))
-                    keyboard
-                end
-                mj{j,k}=inv(Gj'*Gj)*Gj'*x;
-                xm{j,k}=Gj*mj{j,k};
-                normx_list(j,k)=norm(x-xm{j,k});
+        for k=1:length(lamda)
+            gexp2=exp(-t2/lamda(k));
+            %construct matrix for inversion
+            Gj=[t2,ones(size(t2)),gexp2];
+            if rcond(Gj'*Gj)<10^-15 || isnan(rcond(Gj'*Gj))
+                keyboard
             end
+            mj{k}=inv(Gj'*Gj)*Gj'*x;
+            xm{k}=Gj*mj{k};
+            normx_list(k)=norm(x-xm{k});
         end
         
-        [~,imx1]=min(min(normx_list'));
-        [~,imx2]=min(normx_list(imx1,:));
-        lamdax1_best{i}=lamda(imx1);
+        [~,imx2]=min(normx_list);
         lamdax2_best{i}=lamda(imx2);
-        normx_best{i}=normx_list(imx1,imx2);
-        mx_best{i}=mj{imx1,imx2};
-        x_best{i}=xm{imx1,imx2};
-        expx1_best{i}=mx_best{i}(3)*exp(-t2/lamdax1_best{i});
-        expx2_best{i}=mx_best{i}(4)*exp(-t2/lamdax2_best{i});
+        normx_best{i}=normx_list(imx2);
+        mx_best{i}=mj{imx2};
+        x_best{i}=xm{imx2};
+        expx2_best{i}=mx_best{i}(3)*exp(-t2/lamdax2_best{i});
         
         %-- Y
         normy_list=[];
-        for j=1:20
-            gexp1=exp(-t2/lamda(j));
-            for k=1:length(lamda)
-                if k==j
-                    normy_list(j,k)=1;
-                    continue
-                end
-                gexp2=exp(-t2/lamda(k));
-                %construct matrix for inversion
-                Gj=[t2,ones(size(t2)),gexp1,gexp2];
-                if rcond(Gj'*Gj)<10^-15 || isnan(rcond(Gj'*Gj))
-                    keyboard
-                end
-                mj{j,k}=inv(Gj'*Gj)*Gj'*y;
-                ym{j,k}=Gj*mj{j,k};
-                normy_list(j,k)=norm(y-ym{j,k});
+        for k=1:length(lamda)
+            gexp2=exp(-t2/lamda(k));
+            %construct matrix for inversion
+            Gj=[t2,ones(size(t2)),gexp2];
+            if rcond(Gj'*Gj)<10^-15 || isnan(rcond(Gj'*Gj))
+                keyboard
             end
+            mj{k}=inv(Gj'*Gj)*Gj'*y;
+            ym{k}=Gj*mj{k};
+            normy_list(k)=norm(y-ym{k});
         end
         
-        [~,imy1]=min(min(normy_list'));
-        [~,imy2]=min(normy_list(imy1,:));
-        lamday1_best{i}=lamda(imy1);
+        [~,imy2]=min(normy_list);
         lamday2_best{i}=lamda(imy2);
-        normy_best{i}=normy_list(imy1,imy2);
-        my_best{i}=mj{imy1,imy2};
-        y_best{i}=ym{imy1,imy2};
-        expy1_best{i}=my_best{i}(3)*exp(-t2/lamday1_best{i});
-        expy2_best{i}=my_best{i}(4)*exp(-t2/lamday2_best{i});
+        normy_best{i}=normy_list(imy2);
+        my_best{i}=mj{imy2};
+        y_best{i}=ym{imy2};
+        expy2_best{i}=my_best{i}(3)*exp(-t2/lamday2_best{i});
                 
         %----- correct with exponential terms only and append to data segments
-        ecor=eint-(expx1_best{i}+expx2_best{i});
-        ncor=nint-(expy1_best{i}+expy2_best{i});
-        
-        figure(34); clf;
-        subplot(211); hold on
-        plot(tint,eint,'linewidth',1)
-        plot(tint,ecor,'linewidth',1)
-        datetick('x')
-        subplot(212); hold on
-        plot(tint,nint,'linewidth',1)
-        plot(tint,ncor,'linewidth',1)
-        datetick('x')
-%         keyboard
-        
-        eint=ecor(17:end);
-        nint=ncor(17:end);
-        tint=tint(17:end);
-        Tint=Tint(17:end);
-        
+        if length(eint)>5000
+            ecor=eint; ecor(1:5000)=ecor(1:5000)-(expx2_best{i});
+            ncor=nint; ncor(1:5000)=ncor(1:5000)-(expy2_best{i});
+        else
+            ecor=eint-(expx2_best{i});
+            ncor=nint-(expy2_best{i});
+        end
+                
         %substitute points during calibration and recovery with NaNs
-        inan=flipstart_min(i-1)-ipre:flipstart_min(i-1)+ipost;
+        inan=flipstart_min(i-1)-ipre:flipstart_min(i-1)+ipost-1;
         stitch_min.MNE(inan)=nan;
         stitch_min.MNN(inan)=nan;
         stitch_min.MNZ(inan)=nan;
         stitch_min.MKA(inan)=nan;
     end
     
-%     % plots to check transient detrending
-%     if i~=1 && i~=17
-%         figure(1); clf
-%         plot(transients(i).t,transients(i).x)
-%         hold on
-%         plot(tint,eint)
-%         plot(transients(i).t,transients(i).x_cor)
-%         eint_cor=eint-px(1)*[1:length(eint)]';
-%         plot(tint,eint_cor-(eint_cor(1)-transients(i).x_cor(end)))
-%         ylim([-0.00005 0.00005]+transients(i).x(end))
-%         figure(2)
-%         plot(detrend([transients(i).x(20:end);eint]))
+    eint=ecor(excluded(i):end);
+    nint=ncor(excluded(i):end);
+    tint=tint(excluded(i):end);
+    Tint=Tint(excluded(i):end);
+    T2int=Tint; T2int(1:500)=NaN;
+    
+    % plots to check for anything going wrong
+    figure(34); clf;
+    subplot(211); hold on
+    plot(tint,detrend(eint),'linewidth',1)
+    datetick('x')
+    subplot(212); hold on
+    plot(tint,detrend(nint),'linewidth',1)
+    datetick('x')
+%     if i>=33
 %         keyboard
 %     end
-    
+            
     if lindrift
         xdrift=m_X(1)/24/60;
         ydrift=m_Y(1)/24/60;
@@ -432,6 +504,8 @@ for i=1:length(flipstart_min)
             
             tempy=[tempy; nint-cal1.ay+sum(cal_log_cor(1:end-1,2))-ydrift*24*60*(tint-flipdate_min(i-1))];
             tempt=[tempt; tint];
+            tempT=[tempT; Tint];
+            tempT2=[tempT2;T2int];
             
             figure(1)
             subplot(211)
@@ -443,7 +517,7 @@ for i=1:length(flipstart_min)
             if i==19
                 figure(8); clf;
                 subplot(311); hold on
-                plot(stitch_min.t(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre)),x,'r','linewidth',1)
+                plot(stitch_min.t(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre)),[x;eint(5001:end)],'r','linewidth',1)
                 plot(tint,eint,'b','linewidth',1)
                 datetick('x',6)
                 xtickangle(45)
@@ -486,7 +560,7 @@ for i=1:length(flipstart_min)
             if i==20
                 figure(8)
                 subplot(311);
-                plot(stitch_min.t(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre)),x,'r','linewidth',1)
+                plot(stitch_min.t(flipstart_min(i-1)+(ipost):flipstart_min(i)-(ipre)),[x;eint(5001:end)],'r','linewidth',1)
                 plot(tint,eint,'b','linewidth',1)
                 datetick('x',6)
                 xtickangle(45)
@@ -919,25 +993,10 @@ else
     fh.PaperPosition=[0 0 11 8.5];
     print('../longterm_tilt/PinonFlat/correction_tests/inv_corrected_Y','-dtiff','-r300')
 end
-%% resume original code
 
+tout=tempt; xout=tempx; yout=tempy; Tout=tempT; T2out=tempT2;
 keyboard;
 
-%% Manually correct connection loss offset (come up with better solution)
-
-p_e1=polyfit(stitch_min.t(i1-5000:i1-1)-stitch_min.t(i1-5000),stitch_min.MNE(i1-5000:i1-1),1);
-lin_e2=polyval(p_e1,stitch_min.t(i2+1:i2+5000)-stitch_min.t(i1-5000));
-e2_dif=lin_e2-stitch_min.MNE(i2+1:i2+5000);
-Ge=ones(size(e2_dif));
-e_offset=inv(Ge'*Ge)*Ge'*e2_dif;
-stitch_min.MNE(i2+1:end)=stitch_min.MNE(i2+1:end)+e_offset;
-
-p_n1=polyfit(stitch_min.t(i1-5000:i1-1)-stitch_min.t(i1-5000),stitch_min.MNN(i1-5000:i1-1),1);
-lin_n2=polyval(p_n1,stitch_min.t(i2+1:i2+5000)-stitch_min.t(i1-5000));
-n2_dif=lin_n2-stitch_min.MNN(i2+1:i2+5000);
-Gn=ones(size(n2_dif));
-n_offset=inv(Gn'*Gn)*Gn'*n2_dif;
-stitch_min.MNN(i2+1:end)=stitch_min.MNN(i2+1:end)+n_offset;
 
 %% convert accel to tilt in microrad
 stitch_min.LAX=asin(stitch_min.MNE/9.81)*10^6;stitch_min.LAX=stitch_min.LAX-stitch_min.LAX(1);
@@ -945,6 +1004,70 @@ stitch_min.LAY=asin(stitch_min.MNN/9.81)*10^6;stitch_min.LAY=stitch_min.LAY-stit
 stitch_hr.LAX=asin(stitch_hr.MNE/9.81)*10^6;stitch_hr.LAX=stitch_hr.LAX-stitch_hr.LAX(1);
 stitch_hr.LAY=asin(stitch_hr.MNN/9.81)*10^6;stitch_hr.LAY=stitch_hr.LAY-stitch_hr.LAY(1);
 
-%save figures, variables
+%save variables
 % save('../calibrations/Axial/axialstitch_hr.mat','stitch_hr')
-save('../calibrations/PinonFlat/PFstitch_min_temp2.mat','stitch_min')
+% save('../calibrations/PinonFlat/PFstitch_min_temp2.mat','stitch_min')
+end
+
+function [tout,eout,nout,Tout]=fix_gaps(tin,ein,nin,Tin,ii)
+
+if ii==15
+    % gap and offset details
+    ind1=4445;
+    ind2=4550;
+    a_e=1.5e-6;
+    a_n=-3e-6;
+    
+    tout=tin; Tout=Tin;
+elseif ii==18
+    % this one has a time basis issue
+    tin(28919:29340)=[]; ein(28919:29340)=[]; nin(28919:29340)=[]; Tin(28919:29340)=[];
+    tin2=(tin(1):datenum(0000,00,00,00,01,00):tin(end))';
+    ein=interp1(tin,ein,tin2);
+    nin=interp1(tin,nin,tin2);
+    Tout=interp1(tin,Tin,tin2);
+    tin=tin2; tout=tin;
+    
+    % gap and offset details
+    ind1=16400;
+    ind2=17700;
+    a_e=1.4e-5;
+    a_n=-1.6e-5;
+elseif ii==27
+    % this one has a time basis issue
+    tin(1530:1660)=[]; ein(1530:1660)=[]; nin(1530:1660)=[]; Tin(1530:1660)=[];
+    tin2=(tin(1):datenum(0000,00,00,00,01,00):tin(end))';
+    ein=interp1(tin,ein,tin2);
+    nin=interp1(tin,nin,tin2);
+    Tout=interp1(tin,Tin,tin2);
+    tin=tin2; tout=tin;
+    
+    % no gaps after time fixed
+    eout=ein; nout=nin;
+    return
+elseif ii==33
+    % this one has a time basis issue
+    tin(26020:27000)=[]; ein(26020:27000)=[]; nin(26020:27000)=[]; Tin(26020:27000)=[];
+    tin2=(tin(1):datenum(0000,00,00,00,01,00):tin(end))';
+    ein=interp1(tin,ein,tin2);
+    nin=interp1(tin,nin,tin2);
+    Tout=interp1(tin,Tin,tin2);
+    tin=tin2; tout=tin;
+    
+    % no gaps after time fixed
+    eout=ein; nout=nin;
+    return
+else
+    % do nothing if no gaps
+    tout=tin; eout=ein; nout=nin; Tout=Tin;
+    return
+end
+
+nin(ind2+1:end)=nin(ind2+1:end)+a_n;
+nin(ind1:ind2)=interp1(tin([1:ind1-1,ind2+1:end]),nin([1:ind1-1,ind2+1:end]),tin(ind1:ind2));
+nout=nin;
+ein(ind2+1:end)=ein(ind2+1:end)+a_e;
+ein(ind1:ind2)=interp1(tin([1:ind1-1,ind2+1:end]),ein([1:ind1-1,ind2+1:end]),tin(ind1:ind2));
+eout=ein;
+
+end
