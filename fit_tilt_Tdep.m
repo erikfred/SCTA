@@ -15,7 +15,7 @@ function [M] = fit_tilt_Tdep(time,accel,Temp,dTemp)
 %       y = a*(t') + b*(T') + [c*(dT')] + d + e*exp(-(t')/f)
 %
 
-model=2; % 0 - unique offsets allowed, 1 - unique slopes allowed, 2 - dT/dt dependence
+model=1; % 0 - unique offsets allowed, 1 - unique slopes allowed, 2 - dT/dt dependence
 
 % scale datenums better for inversions
 tstart=time{1}(1);
@@ -368,8 +368,7 @@ elseif model==1
     
     %----- PLOTTING
     % show goodness of fit and exponential-/temperature-corrected tilt
-    figure(2); clf
-    subplot(121); hold on
+    figure(2); clf; hold on
     plot(t_obs+tstart,a_obs,'k','linewidth',1)
     plot(t_obs+tstart,a_star,'r:','linewidth',2)
     datetick('x',3,'keeplimits')
@@ -380,21 +379,32 @@ elseif model==1
     yyaxis right
     plot(t_obs+tstart,cat(1,Temp{:}),'m','linewidth',1)
     ylabel(['Temperature (' char(176) 'C)'])
-    title(['Full model (x tilt fit \sigma = ' num2str(std(a_obs-a_star)) ' m/s^2)'])
-    legend('Input','Exp + T Model','Residual','location','northwest')
+    disp(['Full model (x tilt fit \sigma = ' num2str(std(a_obs-a_star)) ' m/s^2)'])
+    legend('Input','Model','Residual','location','northwest')
     grid on; box on
-    subplot(122);
-    a_cor=(a_obs-a_star)+m_star(1)*G_lin(:,1)+m_star(2)*G_lin(:,2);
+    fh=gcf;
+    fh.PaperUnits='inches';
+    fh.PaperPosition=[0 0 5.5 4.25];
+    print('../longterm_tilt/PinonFlat/manuscript/y_accel_model','-dtiff','-r300')
+    print('../longterm_tilt/PinonFlat/manuscript/y_accel_model','-depsc','-painters')
+
+    figure(3); clf; hold on
+    a_cor=(a_obs-a_star)+m_star(1)*G_lin(:,1)+m_star(2)*G_lin(:,2)+(m_star(4)-m_star(5))*g_c2;
     plot(t_obs+tstart,a_cor,'k','linewidth',1)
     datetick('x',3,'keeplimits')
     xtickangle(45)
     ylabel('Acceleration (m/s^2)')
-    title('Drift-, Temperature-, and Exponent-corrected x tilt')
+%     title('Drift-, Temperature-, and Exponent-corrected x tilt')
     grid on; box on
     set(gca,'fontsize',12)
+    fh=gcf;
+    fh.PaperUnits='inches';
+    fh.PaperPosition=[0 0 5.5 4.25];
+    print('../longterm_tilt/PinonFlat/manuscript/y_accel','-dtiff','-r300')
+    print('../longterm_tilt/PinonFlat/manuscript/y_accel','-depsc','-painters')
     
     % show modeled alignment of segments without other corrections
-    figure(3); clf
+    figure(4); clf
     plot(time{1}+tstart,accel{1}-(m_star(4)+m_star(6)*exp(-time{1}/m_star(7))),'k','linewidth',1)
     hold on
     plot(time{2}+tstart,accel{2}-(m_star(5)),'b','linewidth',1)
@@ -406,11 +416,6 @@ elseif model==1
     %     ['C = ' num2str(m_star(3)) ' (m/s^2)/(C/d)'];['D = ' num2str(m_star(4)) ' m/s^2'];...
     %     ['E = ' num2str(m_star(5)) ' m/s^2'];['F = ' num2str(m_star(6)) ' d^-^1']};
     % text(50,4e-4,temp,'fontsize',12)
-    %
-    % fh=gcf;
-    % fh.PaperUnits='inches';
-    % fh.PaperPosition=[0 0 11 8.5];
-    % print('../temperature_dependence/PinonFlat/by_orientation/PF_expInversion_dT_Y','-dtiff','-r300')
     
 elseif model==2
         
