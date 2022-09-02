@@ -362,8 +362,8 @@ if strcmp(suffix,'_newloc')
     fh=gcf;
     fh.PaperUnits='inches';
     fh.PaperPosition=[0 0 8.5 11];
-    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_x'],'-dtiff','-r300')
-    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_x'],'-depsc','-painters')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_xbad'],'-dtiff','-r300')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_xbad'],'-depsc','-painters')
     
     i_y1=i_y;
     i_yneg=i_negy([1:36 38:end]); i_ynegb=i_negy(37);
@@ -400,8 +400,8 @@ if strcmp(suffix,'_newloc')
 %     xl=xlim; yl=ylim; plot([0 0]+xl(1)+diff(xl)/10,mean(yl)-[0.00005 -0.00005],'-k','linewidth',2); text(xl(1)+diff(xl)/9,mean(yl),'10 \mug','fontsize',12)
     box on; grid on
     subplot(313); hold on
-    yspan=flipInfoAll.gCal(intersect(i_y1,i_yneg-1))+flipInfoAll.gCal(intersect(i_y1+1,i_yneg));
-    yspanb=flipInfoAll.gCal(i_ynegb-1)+flipInfoAll.gCal(i_ynegb);
+    yspan=(flipInfoAll.gCal(intersect(i_y1,i_yneg-1))+flipInfoAll.gCal(intersect(i_y1+1,i_yneg)));
+    yspanb=(flipInfoAll.gCal(i_ynegb)+flipInfoAll.gCal(intersect(i_y1+1,i_yneg)));
     plot(flipInfoAll.t(intersect(i_y1,i_yneg-1)),yspan-yspan(1),'k^','markersize',12);
     datetick('x',3)
     xtickangle(45)
@@ -541,8 +541,8 @@ elseif strcmp(suffix,'')
     fh=gcf;
     fh.PaperUnits='inches';
     fh.PaperPosition=[0 0 8.5 11];
-    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_x'],'-dtiff','-r300')
-    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_x'],'-depsc','-painters')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_xbad'],'-dtiff','-r300')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_xbad'],'-depsc','-painters')
     
     i_y1=i_y([1:31,34:50,52:end]); i_y1b=i_y([32,33,51]);
     i_yneg=i_negy([1:7,12:14,16:18,20:28,30:40]); i_ynegb=i_negy([8,9,10,11,15,19,29,41]);
@@ -611,6 +611,6 @@ elseif strcmp(suffix,'')
     fh=gcf;
     fh.PaperUnits='inches';
     fh.PaperPosition=[0 0 8.5 11];
-    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_y'],'-dtiff','-r300')
-    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_y'],'-depsc','-painters')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_ybad'],'-dtiff','-r300')
+    print(['../calibrations/Axial/process_Axial' suffix '_manuscript_ybad'],'-depsc','-painters')
 end
