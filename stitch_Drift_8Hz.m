@@ -1,0 +1,517 @@
+% stitchDrift_8Hz.m
+%
+% Stitches together inter-calibration segments from decimated 8Hz data
+% stream, removing offsets and applying calibrations. 
+%
+
+clear; close all
+
+%%%%%%%%%%CONFIG%%%%%%%%%%
+axial1=false;
+axial2=true;
+lily=false;
+pf=false;
+
+method=1; % 1 - cal-to-cal drift, 2 - drift model, 3 - zero drift
+%%%%%%%%END CONFIG%%%%%%%%
+
+if axial1
+    % relevant filenames for Axial Location 1
+    flipfile='../calibrations/Axial/axialdata.mat';
+    datafile_hr='../calibrations/Axial/axialdata_hr.mat';
+    datafile_min='../calibrations/Axial/axialdata_min.mat';
+    savefile_hr='../calibrations/Axial/axialstitch_hr.mat';
+    savefile_min='../calibrations/Axial/axialstitch_min.mat';
+    
+    load('../compass_directions.mat')
+    load('../calibrations/Axial/badcaldates')
+end
+
+if axial2
+    % relevant filenames for Axial Location 2
+    flipfile='../calibrations/Axial/axialdata_newloc.mat';
+    datafile_hr='../calibrations/Axial/axialdata_newloc_hr.mat';
+    datafile_min='../calibrations/Axial/axialdata_newloc_min.mat';
+    savefile_hr='../calibrations/Axial/axialstitch_newloc_hr.mat';
+    savefile_min='../calibrations/Axial/axialstitch_newloc_min.mat';
+    
+    load('../compass_directions.mat')
+    load('../calibrations/Axial/badcaldates_newloc')
+end
+
+if pf
+    % relevant filenames for Pinon Flat
+    flipfile='../calibrations/PF/PFdata.mat';
+    datafile_hr='../calibrations/PF/PFdata_hr.mat';
+    datafile_min='../calibrations/PF/PFdata_min.mat';
+    savefile_hr='../calibrations/PF/PFstitch_hr.mat';
+    savefile_min='../calibrations/PF/PFstitch_min.mat';
+end
+
+
+load(flipfile,'flipInfoAll')
+load(datafile_hr)
+load(datafile_min)
+
+% pick up data structure from previous run, or start from scratch
+if exist(savefile_hr,'file') && exist(savefile_min,'file')
+    load(savefile_hr)
+    load(savefile_min)
+
+    i0=length(stitch_hr)+1;
+    stitch_hr.t=[stitch_hr.t; data_hr.t(i0:end)];
+    stitch_hr.MNE=[stitch_hr.MNE; data_hr.MNE(i0:end)];
+    stitch_hr.MNN=[stitch_hr.MNN; data_hr.MNN(i0:end)];
+    stitch_hr.MNZ=[stitch_hr.MNZ; data_hr.MNZ(i0:end)];
+    stitch_hr.MKA=[stitch_hr.MKA; data_hr.MKA(i0:end)];
+    stitch_hr.iflip=[stitch_hr.iflip; data_hr.iflip(i0:end)];
+
+    i0=length(stitch_min)+1;
+    stitch_min.t=[stitch_min.t; data_min.t(i0:end)];
+    stitch_min.MNE=[stitch_min.MNE; data_min.MNE(i0:end)];
+    stitch_min.MNN=[stitch_min.MNN; data_min.MNN(i0:end)];
+    stitch_min.MNZ=[stitch_min.MNZ; data_min.MNZ(i0:end)];
+    stitch_min.MKA=[stitch_min.MKA; data_min.MKA(i0:end)];
+    stitch_min.iflip=[stitch_min.iflip; data_min.iflip(i0:end)];
+else
+    stitch_hr=data_hr;
+    stitch_min=data_min;
+end
+
+%% 1 sample/minute version
+% identify indices of intervals
+tf_flipstart=ischange(stitch_min.t(stitch_min.iflip)); tf_flipstart(1)=true;
+iflipstart=find(tf_flipstart); iflipend=[iflipstart(2:end)-1;length(tf_flipstart)];
+iflipstart_min=stitch_min.iflip(iflipstart); iflipend_min=stitch_min.iflip(iflipend);
+flipstartdate_min=stitch_min.t(iflipstart_min); flipenddate_min=stitch_min.t(iflipend_min); % datenums of flips for reference
+iend=length(stitch_min.t);
+
+for i=1:length(iflipstart_min)+1
+    % substitute points during calibration with NaNs
+    inan=iflipstart_min(i):iflipend_min(i);
+    stitch_min.MNE(inan)=nan;
+    stitch_min.MNN(inan)=nan;
+    stitch_min.MNZ(inan)=nan;
+    stitch_min.MXG(inan)=nan;
+    stitch_min.MKA(inan)=nan;
+
+    % store calibration values
+    if flipstartdate_min(i)<datenum(2019,08,13)
+        icals=find(ceil(stitch_min.t(iflipstart_min(i)))==ceil(flipInfoAll.t));
+        cals(i).x1_plus=flipInfoAll.gCalTCor(icals(1));
+        cals(i).y_plus=flipInfoAll.gCalTCor(icals(2));
+        cals(i).x2_plus=flipInfoAll.gCalTCor(icals(3));
+    elseif i<=length(iflipstart_min)
+        icals=find(ceil(stitch_min.t(iflipstart_min(i)))==ceil(flipInfoAll.t));
+        cals(i).x1_plus=flipInfoAll.gCalTCor(icals(1));
+        cals(i).y_plus=flipInfoAll.gCalTCor(icals(2));
+        cals(i).y_minus=flipInfoAll.gCalTCor(icals(3));
+        cals(i).x2_plus=flipInfoAll.gCalTCor(icals(4));
+        cals(i).x_minus=flipInfoAll.gCalTCor(icals(5));
+        
+        icals2=find(ceil(stitch_min.t(iflipstart_min(i+1)))==ceil(flipInfoAll.t));
+        cals(i+1).x1_plus=flipInfoAll.gCalTCor(icals2(1));
+        cals(i+1).y_plus=flipInfoAll.gCalTCor(icals2(2));
+        cals(i+1).y_minus=flipInfoAll.gCalTCor(icals2(3));
+        cals(i+1).x2_plus=flipInfoAll.gCalTCor(icals2(4));
+        cals(i+1).x_minus=flipInfoAll.gCalTCor(icals2(5));
+    else % for last interval, assume same drift rate as prior
+        cals(i).x1_plus=cals(i-1).x1_plus+(cals(i-1).x1_plus-cals(i-2).x1_plus);
+        cals(i).y_plus=cals(i-1).y_plus+(cals(i-1).y_plus-cals(i-2).y_plus);
+        cals(i).y_minus=cals(i-1).y_minus+(cals(i-1).y_minus-cals(i-2).y_minus);
+        cals(i).x2_plus=cals(i-1).x2_plus+(cals(i-1).x2_plus-cals(i-2).x2_plus);
+        cals(i).x_minus=cals(i-1).x_minus+(cals(i-1).x_minus-cals(i-2).x_minus);
+    end
+    
+    % isolate inter-calibration segments
+    if i==1 % first interval is special case
+        iint=1:iflipstart_min(i)-1;
+    elseif i<=length(iflipstart_min)
+        pint=iint;
+        iint=iflipend_min(i-1)+1:iflipstart_min(i)-1;
+    else % last interval is special case
+        pint=iint;
+        iint=iflipend_min(i-1)+1:length(stitch_min.t);
+    end
+    xint=stitch_min.MNE(iint);
+    yint=stitch_min.MNN(iint);
+    if any(isnan(xint)) || any(isnan(yint))
+        xint=inpaint_nans(xint,1);
+        yint=inpaint_nans(yint,1);
+    end
+    
+    % determine linearized interval drift rate
+    if method==1
+        if i==1
+            x1drift=(cals(i+1).x1_plus-cals(i).x1_plus)/(flipstartdate_min(i+1)-flipstartdate_min(i))/24/60; % per minute
+            ydrift=(cals(i+1).y_plus-cals(i).y_plus)/(flipstartdate_min(i+1)-flipstartdate_min(i))/24/60; % per minute
+            x2drift=(cals(i+1).x2_plus-cals(i).x2_plus)/(flipstartdate_min(i+1)-flipstartdate_min(i))/24/60; % per minute
+        else
+            x1drift=(cals(i).x1_plus-cals(i-1).x1_plus)/(flipstartdate_min(i)-flipstartdate_min(i-1))/24/60; % per minute
+            ydrift=(cals(i).y_plus-cals(i-1).y_plus)/(flipstartdate_min(i)-flipstartdate_min(i-1))/24/60; % per minute
+            x2drift=(cals(i).x2_plus-cals(i-1).x2_plus)/(flipstartdate_min(i)-flipstartdate_min(i-1))/24/60; % per minute
+        end
+    elseif method==2
+        % REPLACE WITH LOADING DRIFT MODEL
+        linx1=polyfit(flipInfoAll.t,flipInfoAll.gCal,1); % fit good cals w/linear
+        x1drift=linx1(1)/24/60; % convert drift to per minute
+        liny=polyfit(flipInfoAll.t,flipInfoAll.gCal,1);
+        ydrift=liny(1)/24/60;
+        linx2=polyfit(flipInfoAll.t,flipInfoAll.gCal,1);
+        x2drift=linx2(1)/24/60;
+    elseif method==3
+        x1drift=0;
+        ydrift=0;
+        x2drift=0;
+    end
+    disp(['X1 drift rate = ' num2str(x1drift*60*24*365*10^5) ' \mug/yr'])
+    disp(['Y drift rate = ' num2str(ydrift*60*24*365*10^5) ' \mug/yr'])
+    disp(['X2 drift rate = ' num2str(x2drift*60*24*365*10^5) ' \mug/yr'])
+
+    % put linearized drift on same time basis as data segment
+    x1lin=linspace(0,x1drift*length(xint),length(xint))';
+    ylin=linspace(0,ydrift*length(yint),length(yint))';
+    x2lin=linspace(0,x2drift*length(xint),length(xint))';
+
+    x1int_cal=xint-x1lin;
+    yint_cal=yint-ylin;
+    x2int_cal=xint-x2lin;
+
+    % plot isolated segments before and after drift correcting for in-line testing
+    figure(3)
+    subplot(211); hold on
+    plot(stitch_min.t(iint),xint-nanmean(xint),'linewidth',1)
+    plot(stitch_min.t(iint),x1int_cal-nanmean(x1int_cal),'linewidth',1)
+    ylabel('X1')
+    datetick('x','keeplimits')
+    subplot(212); hold on
+    plot(stitch_min.t(iint),yint-nanmean(yint),'linewidth',1)
+    plot(stitch_min.t(iint),yint_cal-nanmean(yint_cal),'linewidth',1)
+    ylabel('Y')
+    datetick('x','keeplimits')
+    keyboard
+
+    % remove anomalies (manual for now)
+%     if i==2
+%         iseg1=1:7990; seg1e=x1int_cal(iseg1); seg1n=yint_cal(iseg1);
+%         p1e=polyfit(iseg1,seg1e,1); p1n=polyfit(iseg1,seg1n,1);
+%         iseg2=iseg1(end)+1:length(x1int_cal); seg2e_lin=polyval(p1e,iseg2); seg2n_lin=polyval(p1n,iseg2);
+%         x1int_cal(iseg2)=seg2e_lin; yint_cal(iseg2)=seg2n_lin;
+%     elseif i==8
+%         iseg=4639:4700; tseg=stitch_min.t(iflipstart_min(i-1)+120:iflipstart_min(i)-5);
+%         x1int_cal(iseg)=interp1([tseg(1:iseg(1)-1); tseg(iseg(end)+1:end)],[x1int_cal(1:iseg(1)-1); x1int_cal(iseg(end)+1:end)],tseg(iseg));
+% %         iseg=4639:4700; xint_cal(iseg)=[];
+% %         tseg=stitch_min.t(flipstart_min(i-1)+120:flipstart_min(i)-5); tseg(iseg)=[];
+% %         tseg2=[tseg(1:iseg(1)-1); [tseg(iseg(1)-1)+1/24/60:1/24/60:tseg(iseg(end)+1)-1/24/60]'; tseg(iseg(end)+1:end)];
+% %         xint_cal=[xint_cal(1:iseg(1)-1); interp1(tseg,xint_cal,tseg2); xint_cal(iseg(end)+1:end)];
+%     elseif i==18
+%         t_all=stitch_min.t(iflipstart_min(i-1)+120:iflipstart_min(i)-5);
+%         iseg1=1:9341; tseg1=t_all(iseg1); seg1e=x1int_cal(iseg1); seg1n=yint_cal(iseg1);
+%         iseg2=9850:length(x1int_cal); tseg2=t_all(iseg2); seg2e=x1int_cal(iseg2); seg2n=yint_cal(iseg2);
+%         p1e=polyfit(tseg1,seg1e,1); seg2e_lin=polyval(p1e,tseg2); p1n=polyfit(tseg1,seg1n,1); seg2n_lin=polyval(p1n,tseg2);
+%         e2dif=seg2e_lin-seg2e; n2dif=seg2n_lin-seg2n;
+%         Ge=ones(size(e2dif));
+%         seg2e=seg2e+inv(Ge'*Ge)*Ge'*e2dif; seg2n=seg2n+inv(Ge'*Ge)*Ge'*n2dif;
+%         x1int_cal=[seg1e; polyval(p1e,t_all(iseg1(end)+1:iseg2(1)-1)); seg2e]; yint_cal=[seg1n; polyval(p1n,t_all(iseg1(end)+1:iseg2(1)-1)); seg2n];
+%     end
+
+    % minimize offset between segments by aligning last and first day
+    if i==1
+        x1int_cor=x1int_cal;
+        yint_cor=yint_cal;
+        x2int_cor=x2int_cal;
+    else
+        dur=1440; % num of points in each segment to use for alignment
+        int1=pint(end-dur+1:end);
+        int2=iint(1:dur);
+        tbase=stitch_min.t(int1(1));
+        
+        p_x1a=polyfit(stitch_min.t(int1)-tbase,stitch_min.MNE(int1),1);
+        lin_x1b=polyval(p_x1a,stitch_min.t(int2)-tbase);
+        if length(xint)>=dur
+            x1b_dif=lin_x1b-x1int_cal(1:dur);
+        else
+            x1b_dif=lin_x1b(1:length(xint))-x1int_cal;
+        end
+        Gx1=ones(size(x1b_dif));
+        x1_offset=inv(Gx1'*Gx1)*Gx1'*x1b_dif;
+        
+        p_ya=polyfit(stitch_min.t(int1)-tbase,stitch_min.MNN(int1),1);
+        lin_yb=polyval(p_ya,stitch_min.t(int2)-tbase);
+        if length(yint)>=dur
+            yb_dif=lin_yb-yint_cal(1:1440);
+        else
+            yb_dif=lin_yb(1:length(yint))-yint_cal;
+        end
+        Gy=ones(size(yb_dif));
+        y_offset=inv(Gy'*Gy)*Gy'*yb_dif;
+        
+%         p_x2a=polyfit(stitch_min.t(int1)-tbase,stitch_min.MNE2(int1),1);
+%         lin_x2b=polyval(p_x2a,stitch_min.t(int2)-tbase);
+%         if length(xint)>=dur
+%             x2b_dif=lin_x2b-x2int_cal(1:dur);
+%         else
+%             x2b_dif=lin_x2b(1:length(xint))-x2int_cal;
+%         end
+%         Gx2=ones(size(x2b_dif));
+%         x2_offset=inv(Gx2'*Gx2)*Gx2'*x2b_dif;
+        
+        x1int_cor=x1int_cal+x1_offset;
+        yint_cor=yint_cal+y_offset;
+%         x2int_cor=x2int_cal+x2_offset;
+
+%         % another temporary fix to correct offset
+%         if i==20
+%             xint_cor=xint_cor+0.00001;
+%         elseif i==21
+%             yint_cor=yint_cor+2.5e-6;
+%         elseif i==26
+%             xint_cor=xint_cor+6e-6;
+%         elseif i==29
+%             xint_cor=xint_cor-7e-6;
+%         elseif i==33
+%             xint_cor=xint_cor-5e-6;
+%         elseif i==40
+%             xint_cor(33415:end)=xint_cor(33415:end)-1.25e-5;
+%             xint_cor(59897:end)=xint_cor(59897);
+%         end
+    end
+    
+    % for in-line testing of data alignment
+    if i>1
+        figure(2); clf
+        subplot(221); hold on
+        plot(stitch_min.t(pint),stitch_min.MNE(pint),'linewidth',1)
+        plot(stitch_min.t(iint),stitch_min.MNE(iint),'linewidth',1)
+        ylabel('X1')
+        title('unaligned')
+        datetick('x','keeplimits')
+        subplot(222); hold on
+        plot(stitch_min.t(pint),stitch_min.MNE(pint),'linewidth',1)
+        plot(stitch_min.t(iint),x1int_cor,'linewidth',1)
+        datetick('x','keeplimits')
+        title('aligned')
+        subplot(223); hold on
+        plot(stitch_min.t(pint),stitch_min.MNN(pint),'linewidth',1)
+        plot(stitch_min.t(iint),stitch_min.MNN(iint),'linewidth',1)
+        ylabel('Y')
+        datetick('x','keeplimits')
+        subplot(224); hold on
+        plot(stitch_min.t(pint),stitch_min.MNN(pint),'linewidth',1)
+        plot(stitch_min.t(iint),yint_cor,'linewidth',1)
+        datetick('x','keeplimits')
+        keyboard
+    end
+
+    %replace data segment in 'stitch_min'
+    stitch_min.MNE(iint)=x1int_cor;
+    stitch_min.MNN(iint)=yint_cor;
+
+    % for visual inspection of stitched data
+    figure(1)
+    subplot(211); hold on
+    plot(stitch_min.t(iint),stitch_min.MNE(iint),'linewidth',1)
+    ylabel('X1')
+    datetick('x','keeplimits')
+    subplot(212); hold on
+    plot(stitch_min.t(iint),stitch_min.MNN(iint),'linewidth',1)
+    ylabel('Y')
+    datetick('x','keeplimits')
+    keyboard
+end
+
+% tack on remaining data without detrending
+stitch_min.MNE(iflipstart_min(i)+120:end)=stitch_min.MNE(iflipstart_min(i)+120:end)-...
+    (stitch_min.MNE(iflipstart_min(i)+120)-stitch_min.MNE(iflipstart_min(i)-5));
+stitch_min.MNN(iflipstart_min(i)+120:end)=stitch_min.MNN(iflipstart_min(i)+120:end)-...
+    (stitch_min.MNN(iflipstart_min(i)+120)-stitch_min.MNN(iflipstart_min(i)-5));
+
+
+% rotate channels into east and north
+if era==1
+    crd_rot=[cosd(CCMP(5).plus_y) sind(CCMP(5).plus_y); -sind(CCMP(5).plus_y) cosd(CCMP(5).plus_y)];
+elseif era==2
+    crd_rot=[cosd(CCMP(6).plus_y) sind(CCMP(6).plus_y); -sind(CCMP(6).plus_y) cosd(CCMP(6).plus_y)];
+else
+    error('specify era!')
+end
+temp=crd_rot*[stitch_min.MNE';stitch_min.MNN']; stitch_min.MNE_rot=temp(1,:)'; stitch_min.MNN_rot=temp(2,:)';
+    temp=crd_rot*[stitch_hr.MNE';stitch_hr.MNN']; stitch_hr.MNE_rot=temp(1,:)'; stitch_hr.MNN_rot=temp(2,:)';
+
+%convert accel to tilt in microrad, start from zero
+stitch_min.LAX=asin(stitch_min.MNE_rot/9.81)*10^6;stitch_min.LAX=stitch_min.LAX-stitch_min.LAX(1);
+stitch_min.LAY=asin(stitch_min.MNN_rot/9.81)*10^6;stitch_min.LAY=stitch_min.LAY-stitch_min.LAY(1);
+stitch_hr.LAX=asin(stitch_hr.MNE_rot/9.81)*10^6;stitch_hr.LAX=stitch_hr.LAX-stitch_hr.LAX(1);
+stitch_hr.LAY=asin(stitch_hr.MNN_rot/9.81)*10^6;stitch_hr.LAY=stitch_hr.LAY-stitch_hr.LAY(1);
+
+% more quick fixes for poster
+stitch_min.LAY(176944:end)=stitch_min.LAY(176944:end)+0.5;
+
+% save figures, variables
+% save('../calibrations/Axial/axialstitch_hr.mat','stitch_hr')
+% save('../calibrations/Axial/axialstitch_min_temp.mat','stitch_min')
+
+
+%% plot and compare to AXCC1 Lily tiltmeter
+if comptilts
+    
+    refframe='xy'; % aligns Lily Y with SCTA X to avoid SCTA Y settling contamination
+%     reffreame='EN'; % aligns both sensors to compass E and N
+
+    %load data
+    if exist('../tiltcompare/SCTA_Lily_comp/AXCC1data_min.mat','file')
+        load('../tiltcompare/SCTA_Lily_comp/AXCC1data_min.mat')
+    else
+        warning('Could not find LILY data')
+    end
+    
+    if era==1
+        cond=lily_min.t<datenum(2020,09,11);
+        lily_min.t=lily_min.t(cond);
+        lily_min.LAX=lily_min.LAX(cond);
+        lily_min.LAY=lily_min.LAY(cond);
+        lily_min.BDO=lily_min.BDO(cond);
+    elseif era==2
+        cond=lily_min.t>datenum(2020,09,11,12,0,0);
+        lily_min.t=lily_min.t(cond);
+        lily_min.LAX=lily_min.LAX(cond);
+        lily_min.LAY=lily_min.LAY(cond);
+        lily_min.BDO=lily_min.BDO(cond);
+    else
+        error('specify era!')
+    end
+    
+    if strcmp(refframe,'xy')
+%         SCTA.theta=0;
+%         LILY.theta=360+CCMP(4).plus_y-(CCMP(5).plus_y+90);
+        SCTA.theta=10;
+        LILY.theta=0;
+    elseif strcmp(refframe,'EN')
+        SCTA.theta=CCMP(5);
+        LILY.theta=CCMP(4);
+    else
+        error('specify frame of reference!')
+    end
+    
+    % convert SCTA acceleration to tilt
+    SCTA.t=stitch_min.t;
+    SCTA.LAX=asin(stitch_min.MNE/9.81)*10^6;
+    SCTA.LAY=asin(stitch_min.MNN/9.81)*10^6;
+    
+    % SCTA compass corrections
+    crd_rot=[cosd(SCTA.theta) -sind(SCTA.theta); sind(SCTA.theta) cosd(SCTA.theta)];
+    temp=crd_rot*[SCTA.LAX';SCTA.LAY']; SCTA.LAX=temp(1,:)'; SCTA.LAY=temp(2,:)';
+    
+    % start from 0
+    SCTA.LAX=SCTA.LAX-SCTA.LAX(1);
+    SCTA.LAY=SCTA.LAY-SCTA.LAY(1);
+    
+    % fill NaNs
+    SCTA.LAX=inpaint_nans(SCTA.LAX);
+    SCTA.LAY=inpaint_nans(SCTA.LAY);
+    
+    % LILY compass corrections
+    LILY.t=lily_min.t;
+    crd_rot=[cosd(LILY.theta) -sind(LILY.theta); sind(LILY.theta) cosd(LILY.theta)];
+    temp=crd_rot*[lily_min.LAX';lily_min.LAY']; LILY.LAX=temp(1,:)'; LILY.LAY=temp(2,:)';
+    
+    % start from 0
+    LILY.LAX=LILY.LAX-LILY.LAX(1);
+    LILY.LAY=LILY.LAY-LILY.LAY(1);
+    
+%     % more quick fixes for poster
+%     LILY.LAX_rot(164128:end)=LILY.LAX_rot(164128:end)+4;
+%     LILY.LAY_rot(164128:end)=LILY.LAY_rot(164128:end)-4;
+    
+    % interpolate onto same time step
+    LILY.LAX=interp1(LILY.t,LILY.LAX,SCTA.t);
+    LILY.LAY=interp1(LILY.t,LILY.LAY,SCTA.t);
+    
+    % fill NaNs
+    LILY.LAX=inpaint_nans(LILY.LAX);
+    LILY.LAY=inpaint_nans(LILY.LAY);
+    
+    figure(67)
+    clf; hold on
+    plot(SCTA.t,-SCTA.LAX,'r','linewidth',1)
+    plot(SCTA.t,LILY.LAY,'b','linewidth',1)
+    plot(SCTA.t,LILY.LAY+SCTA.LAX,'k','linewidth',1)
+%     plot(flipdate_min,-stitch_min.LAX(flipstart_min-5),'+k','markersize',5,'linewidth',2)
+    legend('SCTA','LILY','Difference','location','northwest')
+%     title(['East Tilt ' datestr(floor(stitch_min.t(1))) ' to ' datestr(floor(stitch_min.t(end)))])
+    ylabel('Tilt (\murad)')
+    datetick('x',3)
+    xtickangle(45)
+    set(gca,'fontsize',12)
+    box on; grid on
+    
+    fh=gcf;
+    fh.PaperUnits='inches';
+    fh.PaperPosition=[0 0 11 8.5];
+    print('../longterm_tilt/Axial/premove/SCTA-X_x','-dtiff','-r300')
+    print('../longterm_tilt/Axial/premove/SCTA-X_x','-depsc','-painters')
+    
+    % get slope of SCTA.LAY and LILY.LAX to use as correction
+    ps=polyfit(SCTA.t-SCTA.t(1),SCTA.LAY,1);
+    pl=polyfit(SCTA.t-SCTA.t(1),LILY.LAX,1);
+    
+    figure(68)
+    clf; hold on
+    plot(SCTA.t,SCTA.LAY,'r','linewidth',1)
+    plot(SCTA.t,LILY.LAX,'b','linewidth',1)
+    plot(SCTA.t,LILY.LAX-SCTA.LAY,'k','linewidth',1)
+    test=detrend(LILY.LAX)-detrend(SCTA.LAY);
+    plot(SCTA.t,test-test(1),'m','linewidth',1)
+%     plot(SCTA.t,SCTA.LAY-(ps(1)-pl(1))*(SCTA.t-SCTA.t(1)),'r:','linewidth',1)
+%     plot(SCTA.t,LILY.LAX-(SCTA.LAY-(ps(1)-pl(1))*(SCTA.t-SCTA.t(1))),'k:','linewidth',1)
+%     plot(flipdate_min,-stitch_min.LAY(flipstart_min-5),'+k','markersize',5,'linewidth',2)
+    legend('SCTA','LILY','Difference','Detrended Difference','location','northwest')
+%     title(['North Tilt ' datestr(floor(stitch_min.t(1))) ' to ' datestr(floor(stitch_min.t(end)))])
+    ylabel('Tilt (\murad)')
+    datetick('x',3)
+    xtickangle(45)
+    set(gca,'fontsize',12)
+    box on; grid on
+    
+    fh=gcf;
+    fh.PaperUnits='inches';
+    fh.PaperPosition=[0 0 11 8.5];
+    print('../longterm_tilt/Axial/premove/SCTA-X_y','-dtiff','-r300')
+    print('../longterm_tilt/Axial/premove/SCTA-X_y','-depsc','-painters')
+end
+
+% save('../tiltcompare/SCTA_Lily_comp/AXCC1data_min_temp','lily_min')
+%% placeholder code  to be incorporated later
+% intended to mark where calibrations are made to check that stitching is
+% properly lining up segments
+
+% keyboard % to ensure this doesn't run until I get it in the proper place
+% 
+% [~,ical,~]=unique(round(flipInfoAll.t)); % finds calibration days
+% t_flip=flipInfoAll.t(ical); % finds time of calibration
+% 
+% for j=1:length(t_flip)
+% [~,im(j)]=min(abs(stitch_min.t-t_flip(j)));
+% end
+% 
+% plot(t_flip,stitch_min.LAX1(im),'ok','markersize',10)
+
+%% fixing gaps/steps in Lily data
+
+lily_min.LAX(437922:end)=lily_min.LAX(437922:end)-0.4;
+lily_min.LAX(380931:382251)=NaN; lily_min.LAX(382251:end)=lily_min.LAX(382251:end)-2.5;
+lily_min.LAX(253002:end)=lily_min.LAX(253002:end)+1.25;
+lily_min.LAX(236467:240372)=NaN; lily_min.LAX(240372:end)=lily_min.LAX(240372:end)-0.25;
+lily_min.LAX(164126:165088)=NaN; lily_min.LAX(165088:end)=lily_min.LAX(165088:end)+2.5;
+lily_min.LAX(16464:17505)=NaN; lily_min.LAX(17505:end)=lily_min.LAX(17505:end)+1.5;
+
+lily_min.LAY(413104:413411)=NaN; lily_min.LAY(413411:end)=lily_min.LAY(413411:end)-1;
+lily_min.LAY(346602:end)=lily_min.LAY(346602:end)-1;
+lily_min.LAY(253002:end)=lily_min.LAY(253002:end)-1;
+lily_min.LAY(236467:240372)=NaN; lily_min.LAY(240372:end)=lily_min.LAY(240372:end)-0.5;
+lily_min.LAY(164126:165088)=NaN; lily_min.LAY(165088:end)=lily_min.LAY(165088:end)-1;
+lily_min.LAY(16464:17505)=NaN; lily_min.LAY(17505:end)=lily_min.LAY(17505:end)-2.5;
+
+% fill in NaNs for easier checking
+lilyx=inpaint_nans(lily_min.LAX);
+lilyy=inpaint_nans(lily_min.LAY);

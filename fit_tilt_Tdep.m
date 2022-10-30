@@ -292,6 +292,10 @@ elseif model==1
     t_obs1=[time{1}; zeros(size(time{2}))];
     t_obs2=[zeros(size(time{1})); time{2}];
     T_obs=cat(1,Temp{:});
+    T_obs1=[Temp{1}; zeros(size(Temp{2}))];
+    T_obs2=[zeros(size(Temp{1})); Temp{2}];
+    
+    m_star=[m_star(1:3);m_star(3:end)];
     
     iter=true;
     redo=false;
@@ -307,12 +311,13 @@ elseif model==1
             % y = a1*(t'<tgap) + a2*(t'>tgap) + b*(T') + c1(t'<tgap) + c2(t'>tgap) + e*exp(-(t')/f)
             dyda1=t_obs1;
             dyda2=t_obs2;
-            dydb=T_obs;
+            dydb1=T_obs1;
+            dydb2=T_obs2;
             dydc1=[ones(size(time{1})); zeros(size(time{2}))];
             dydc2=[zeros(size(time{1})); ones(size(time{2}))];
-            G_lin=cat(2,dyda1,dyda2,dydb,dydc1,dydc2);
-            dyde=exp(-t_obs/m_star(7));
-            dydf=m_star(6)*t_obs/m_star(7)^2.*exp(-t_obs/m_star(7));
+            G_lin=cat(2,dyda1,dyda2,dydb1,dydb2,dydc1,dydc2);
+            dyde=exp(-t_obs/m_star(8));
+            dydf=m_star(7)*t_obs/m_star(8)^2.*exp(-t_obs/m_star(8));
             
             G_prime=cat(2,G_lin,dyde,dydf*10^7);
             
@@ -326,13 +331,13 @@ elseif model==1
             dm_star=dm_star/2; %checking for overstep
         end
         
-        m_star2=m_star+[dm_star(1:6);dm_star(7)*10^7];
-        while m_star2(7)<0 %ensures exponential decay
-            dm_star(7)=dm_star(7)/2;
-            m_star2(7)=m_star(7)+dm_star(7)*10^7;
+        m_star2=m_star+[dm_star(1:7);dm_star(8)*10^7];
+        while m_star2(8)<0 %ensures exponential decay
+            dm_star(8)=dm_star(8)/2;
+            m_star2(8)=m_star(8)+dm_star(8)*10^7;
         end
         
-        a_star2=G_lin*m_star2(1:5)+m_star2(6)*exp(-t_obs/m_star2(7));
+        a_star2=G_lin*m_star2(1:6)+m_star2(7)*exp(-t_obs/m_star2(8));
         
         new_norm=norm(a_obs-a_star2);
         disp('new misfit:')
@@ -363,45 +368,55 @@ elseif model==1
         end
     end
     disp('final misfit:')
-    disp(norm(a_obs-a_star))
+    disp(std(a_obs-a_star))
     M=a_star;
     
     %----- PLOTTING
+    crd='East';
+    if strcmp(crd,'North')
+        tiltfac=-10^5;
+        lg='southeast';
+        svstr='N_accel';
+    else
+        tiltfac=10^5;
+        lg='northeast';
+        svstr='E_accel';
+    end
     % show goodness of fit and exponential-/temperature-corrected tilt
     figure(2); clf; hold on
-    plot(t_obs+tstart,a_obs,'k','linewidth',1)
-    plot(t_obs+tstart,a_star,'r:','linewidth',2)
+    plot(t_obs+tstart,a_obs*tiltfac,'k','linewidth',1)
+    plot(t_obs+tstart,a_star*tiltfac,'r:','linewidth',2)
     datetick('x',3,'keeplimits')
     xtickangle(45)
-    ylabel('Acceleration (m/s^2)')
+    ylabel([crd ' Tilt (\murad)'])
     set(gca,'fontsize',12)
-    plot(t_obs+tstart,a_obs-a_star,'b','linewidth',1)
+    plot(t_obs+tstart,(a_obs-a_star)*tiltfac,'b','linewidth',1)
     yyaxis right
     plot(t_obs+tstart,cat(1,Temp{:}),'m','linewidth',1)
     ylabel(['Temperature (' char(176) 'C)'])
     disp(['Full model (x tilt fit \sigma = ' num2str(std(a_obs-a_star)) ' m/s^2)'])
-    legend('Input','Model','Residual','location','northwest')
+    legend('Input','Model','Residual','location',lg)
     grid on; box on
     fh=gcf;
     fh.PaperUnits='inches';
     fh.PaperPosition=[0 0 5.5 4.25];
-    print('../longterm_tilt/PinonFlat/manuscript/y_accel_model','-dtiff','-r300')
-    print('../longterm_tilt/PinonFlat/manuscript/y_accel_model','-depsc','-painters')
+    print(['../longterm_tilt/PinonFlat/manuscript/' svstr '_model'],'-dtiff','-r300')
+    print(['../longterm_tilt/PinonFlat/manuscript/' svstr '_model'],'-depsc','-painters')
 
     figure(3); clf; hold on
-    a_cor=(a_obs-a_star)+m_star(1)*G_lin(:,1)+m_star(2)*G_lin(:,2)+(m_star(4)-m_star(5))*g_c2;
+    a_cor=((a_obs-a_star)+m_star(1)*G_lin(:,1)+m_star(2)*G_lin(:,2))*tiltfac;
     plot(t_obs+tstart,a_cor,'k','linewidth',1)
     datetick('x',3,'keeplimits')
     xtickangle(45)
-    ylabel('Acceleration (m/s^2)')
+    ylabel([crd ' Tilt (\murad)'])
 %     title('Drift-, Temperature-, and Exponent-corrected x tilt')
     grid on; box on
     set(gca,'fontsize',12)
     fh=gcf;
     fh.PaperUnits='inches';
     fh.PaperPosition=[0 0 5.5 4.25];
-    print('../longterm_tilt/PinonFlat/manuscript/y_accel','-dtiff','-r300')
-    print('../longterm_tilt/PinonFlat/manuscript/y_accel','-depsc','-painters')
+    print(['../longterm_tilt/PinonFlat/manuscript/' svstr],'-dtiff','-r300')
+    print(['../longterm_tilt/PinonFlat/manuscript/' svstr],'-depsc','-painters')
     
     % show modeled alignment of segments without other corrections
     figure(4); clf

@@ -37,8 +37,11 @@ if isdir(baseDir)
   fprintf(['Loading SCTA data for ' dateString '\n']);
   fileA = [baseDir dateString '/SCTA-Accel_' dateString '.nc'];
   fileAbackup = [baseDir dateString '/SCTA-Accel_' dateString ' (1).nc'];
-else
+elseif strcmp(baseDir(end-2:end),'.nc')
   fileA = baseDir;
+  fileAbackup = [baseDir(1:end-3) '(1)' baseDir(end-2:end)];
+else
+    error('Invalid path to Google Drive')
 end
   
 
@@ -50,7 +53,7 @@ if ~exist(fileA,'file')
   temp = fileA;
   fileA = fileAbackup;
   if ~exist(fileA,'file')
-    disp(['get_sctaDay - No acceleration file found! - ' fileA]);
+%     disp(['get_sctaDay - No acceleration file found! - ' fileA]);
     data.t = [];
     data.a = [];
     data.as = [];

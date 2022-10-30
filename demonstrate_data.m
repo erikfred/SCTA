@@ -91,7 +91,7 @@ print('../calibrations/example_sequences/example_week_spectral_PF','-depsc','-pa
 
 %--- after data gap
 % get a week of data
-dayPF=datenum(2019,05,12);
+dayPF=datenum(2019,05,19);
 dataPF=get_sctaDay('/Users/erikfred/Google Drive/My Drive/Oceanography/SCTA-Share/OOI-PF/SCTA-PF/ParsedData',dayPF);
 for i=1:6
     dataday=get_sctaDay('/Users/erikfred/Google Drive/My Drive/Oceanography/SCTA-Share/OOI-PF/SCTA-PF/ParsedData',dayPF+i);
@@ -184,6 +184,7 @@ for i=1:6
 end
 
 dataA.a=[dataA.MNE,dataA.MNN,dataA.MNZ];
+dataA.as=dataA.MXG;
 
 noncal_plots(dataA,8)
 
@@ -214,6 +215,7 @@ for i=1:6
 end
 
 dataA.a=[dataA.MNE,dataA.MNN,dataA.MNZ];
+dataA.as=dataA.MXG;
 
 noncal_plots(dataA,8)
 
@@ -295,7 +297,7 @@ data_day=floor(data_in.t(1));
 % remove EQs, anomalies
 data_in.x=filloutliers(detrend(data_in.a(:,1)),'linear','thresholdfactor',6);
 data_in.y=filloutliers(detrend(data_in.a(:,2)),'linear','thresholdfactor',6);
-data_in.z=filloutliers(detrend(data_in.a(:,3)),'linear','thresholdfactor',6);
+data_in.a=filloutliers(detrend(data_in.as),'linear','thresholdfactor',6);
 % decimate
 if fs==40
     d=[4,10,6,10];
@@ -306,13 +308,13 @@ data_in.xd=decimate(data_in.x,d(1),'fir'); data_in.xd=decimate(data_in.xd,d(2),'
 data_in.xd=decimate(data_in.xd,d(3),'fir'); data_in.xd=decimate(data_in.xd,d(4),'fir');
 data_in.yd=decimate(data_in.y,d(1),'fir'); data_in.yd=decimate(data_in.yd,d(2),'fir');
 data_in.yd=decimate(data_in.yd,d(3),'fir'); data_in.yd=decimate(data_in.yd,d(4),'fir');
-data_in.zd=decimate(data_in.z,d(1),'fir'); data_in.zd=decimate(data_in.zd,d(2),'fir');
-data_in.zd=decimate(data_in.zd,d(3),'fir'); data_in.zd=decimate(data_in.zd,d(4),'fir');
+data_in.ad=decimate(data_in.a,d(1),'fir'); data_in.ad=decimate(data_in.ad,d(2),'fir');
+data_in.ad=decimate(data_in.ad,d(3),'fir'); data_in.ad=decimate(data_in.ad,d(4),'fir');
 data_in.td=linspace(data_in.t(1),data_in.t(end),length(data_in.xd));
 % box average to 1 sample/min
 data_in.xm=movmean(data_in.x,fs*60);
 data_in.ym=movmean(data_in.y,fs*60);
-data_in.zm=movmean(data_in.z,fs*60);
+data_in.am=movmean(data_in.a,fs*60);
 
 % time series of day of data
 if fs==40
@@ -324,11 +326,11 @@ figure(12); clf
 plot(data_in.td,data_in.xd+6*c,'b','linewidth',1)
 hold on
 plot(data_in.td,data_in.yd+3*c,'r','linewidth',1)
-plot(data_in.td,data_in.zd,'k','linewidth',1)
+plot(data_in.td,data_in.ad,'k','linewidth',1)
 xlim([data_day data_day+6])
 datetick('x','keeplimits')
 xtickangle(45)
-legend('X','Y','Z-9.81','location','northeast')
+legend('X','Y','A-9.81','location','northeast')
 ylabel('Acceleration (m/s^2)')
 % title(['Example Day at Pinon Flat on ' datestr(data_day)])
 set(gca,'fontsize',14)
@@ -338,20 +340,20 @@ box on; grid on
 if fs==40
     [data_in.pxx,data_in.fx]=pwelch(data_in.x,1024*32,1024*16,1024*32,fs);
     [data_in.pyy,data_in.fy]=pwelch(data_in.y,1024*32,1024*16,1024*32,fs);
-    [data_in.pyz,data_in.fz]=pwelch(data_in.z,1024*32,1024*16,1024*32,fs);
+    [data_in.pya,data_in.fa]=pwelch(data_in.a,1024*32,1024*16,1024*32,fs);
 elseif fs==8
     [data_in.pxx,data_in.fx]=pwelch(data_in.x,1024*8,1024*4,1024*8,fs);
     [data_in.pyy,data_in.fy]=pwelch(data_in.y,1024*8,1024*4,1024*8,fs);
-    [data_in.pyz,data_in.fz]=pwelch(data_in.z,1024*8,1024*4,1024*8,fs);
+    [data_in.pya,data_in.fa]=pwelch(data_in.a,1024*8,1024*4,1024*8,fs);
 end
 
 figure(13); clf
 loglog(data_in.fx,data_in.pxx,'b','linewidth',1)
 hold on
 loglog(data_in.fy,data_in.pyy,'r','linewidth',1)
-loglog(data_in.fz,data_in.pyz,'k','linewidth',1)
+loglog(data_in.fa,data_in.pya,'k','linewidth',1)
 xlim([10^-2 10^1])
-legend('X','Y','Z')
+legend('X','Y','A')
 ylabel('PSD ((m/s^2)^2/Hz)')
 xlabel('Frequency (Hz)')
 % title(['Example Day at Pinon Flat on ' datestr(data_day)])
@@ -366,6 +368,7 @@ t_s=datestr(dayn,31); t_s=t_s(1:10);
 MNN_string=['AXCC2_MNN_' t_s '.miniseed'];
 MNE_string=['AXCC2_MNE_' t_s '.miniseed'];
 MNZ_string=['AXCC2_MNZ_' t_s '.miniseed'];
+MXG_string=['AXCC2_MXG_' t_s '.miniseed'];
 MKA_string=['AXCC2_MKA_' t_s '.miniseed'];
 
 data_out.t=[]; data_out.MNN=[]; data_out.MNE=[]; data_out.MNZ=[]; data_out.MKA=[];
@@ -374,10 +377,12 @@ data_out.t=[]; data_out.MNN=[]; data_out.MNE=[]; data_out.MNZ=[]; data_out.MKA=[
 if ~exist(['../tiltcompare/AXCC2/' MNN_string],'file') || ...
         ~exist(['../tiltcompare/AXCC2/' MNE_string],'file') || ...
         ~exist(['../tiltcompare/AXCC2/' MNZ_string],'file') || ...
+        ~exist(['../tiltcompare/AXCC2/' MXG_string],'file') || ...
         ~exist(['../tiltcompare/AXCC2/' MKA_string],'file')
     IRIS_data_pull('AXCC2','MNN','--',dayn,dayn+1);
     IRIS_data_pull('AXCC2','MNE','--',dayn,dayn+1);
     IRIS_data_pull('AXCC2','MNZ','--',dayn,dayn+1);
+    IRIS_data_pull('AXCC2','MXG','--',dayn,dayn+1);
     IRIS_data_pull('AXCC2','MKA','--',dayn,dayn+1);
 end
 
@@ -385,6 +390,7 @@ end
 if exist(['../tiltcompare/AXCC2/' MNN_string],'file') && ...
         exist(['../tiltcompare/AXCC2/' MNE_string],'file') && ...
         exist(['../tiltcompare/AXCC2/' MNZ_string],'file') && ...
+        exist(['../tiltcompare/AXCC2/' MXG_string],'file') && ...
         exist(['../tiltcompare/AXCC2/' MKA_string],'file')
     
     %MNN channel
@@ -401,6 +407,11 @@ if exist(['../tiltcompare/AXCC2/' MNN_string],'file') && ...
     temp=rdmseed(['../tiltcompare/AXCC2/' MNZ_string]);
     ztemp=double(cat(1,temp.d));
     data_out.MNZ=ztemp/10^7;
+    
+    %MXG channel
+    temp=rdmseed(['../tiltcompare/AXCC2/' MXG_string]);
+    atemp=double(cat(1,temp.d));
+    data_out.MXG=atemp/10^7;
     
     %MKA channel
     temp=rdmseed(['../tiltcompare/AXCC2/' MKA_string]);

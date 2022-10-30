@@ -14,7 +14,7 @@ clear; close all
 
 comptilts=true;
 
-era=1; % 1 - pre-move era, 2 - post-move era
+era=2; % 1 - pre-move era, 2 - post-move era
 method=1; % 1 - cal-to-cal drift, 2 - constant drift, 3 - zero drift
 
 if era==1
@@ -39,8 +39,8 @@ load(datafile_min)
 load('../compass_directions.mat')
 load('../calibrations/Axial/badcaldates','bad_x1','bad_x2','bad_negx','bad_y','bad_negy','bads')
 % will add these permanently later when I understand them fully
-cat(2,bad_x1,datenum(2021,08,23))
-cat(2,bad_negy,datenum(2021,06,16))
+bad_x1=cat(2,bad_x1,datenum(2021,08,23));
+bad_negy=cat(2,bad_negy,datenum(2021,06,16));
 
 % pick up data structure from previous run, or start from scratch
 if exist(savefile_hr,'file') && exist(savefile_min,'file')
@@ -73,12 +73,6 @@ end
 % identify indices of intervals
 iflipstart_min=ischange(stitch_min.t(stitch_min.iflip)); iflipstart_min(1)=true;
 flipstart_min=stitch_min.iflip(iflipstart_min);
-flipstart_min(44)=[]; % temp fix - why isn't this flip recorded in flipInfoAll?
-flipstart_min(57)=[]; % temp fix
-flipstart_min(60)=[]; % temp fix
-flipstart_min(60)=[]; % temp fix
-flipstart_min(60)=[]; % temp fix
-flipstart_min(63:end)=[]; % temp fix
 flipdate_min=stitch_min.t(flipstart_min); %datenums of flips for reference
 
 iend=length(stitch_min.t);
@@ -109,6 +103,7 @@ for i=1:length(flipstart_min)
         continue
     end
     
+    %-----------FROM HERE ON, UPDATE FROM PF VERSION & BY LOADING DRIFT MODEL
     % apply calibration correction to interval
     eint=stitch_min.MNE(flipstart_min(i-1)+120:flipstart_min(i)-5);
     nint=stitch_min.MNN(flipstart_min(i-1)+120:flipstart_min(i)-5);

@@ -22,10 +22,10 @@ na = size(data.a,2);
 % Automated flipping apparatus
 for i=1:length(sampInt)
   if  ~isempty(data.t)
-    [t,a,n] = downsample_uneven2(data.t,data.a,sampInt(i)/86400);
-    [~,T]   = downsample_uneven2(data.t,data.T,sampInt(i)/86400);
+    [t,a,n] = downsample_uneven5(data.t,data.a,sampInt(i)/86400);
+    [~,T]   = downsample_uneven5(data.t,data.T,sampInt(i)/86400);
     if isfield(data,'as')
-      [~,as]   = downsample_uneven2(data.t,data.as,sampInt(i)/86400);
+      [~,as]   = downsample_uneven5(data.t,data.as,sampInt(i)/86400);
     end
     if nargin<3 || ~isfield(dataDec,'t') || isempty(dataDec(i).t)
       dataDec(i).t = t;

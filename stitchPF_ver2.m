@@ -434,28 +434,12 @@ for i=1:length(flipstart_min)
             cal2.y_dif_cal2=(nint(end)-nint(1)-delta_ay)*(flipdate_min(i)-flipdate_min(i-1))/...
                 (tint(end)-tint(1))-(cal2.y_plus-cal1.y_plus);
             
-            cal_log(i,1)=cal2.ax-cal1.ax; cal_log(i,2)=cal2.ay-cal1.ay;
-            cal_log_cor(i,1)=cal2.x_dif_cal; cal_log_cor(i,2)=cal2.y_dif_cal;
+            cal_log(i,1)=cal2.ax-cal1.ax; cal_log(i,2)=cal2.ay-cal1.ay; % logs difference between extrapolated segment ends
+            cal_log_cor(i,1)=cal2.x_dif_cal; cal_log_cor(i,2)=cal2.y_dif_cal; % logs drift-corrected segment ends
             xdrift=(cal2.x_plus-cal1.x_plus)/(flipdate_min(i)-flipdate_min(i-1))/24/60; %per minute
             ydrift=(cal2.y_plus-cal1.y_plus)/(flipdate_min(i)-flipdate_min(i-1))/24/60; %per minute
             disp(['X drift rate = ' num2str(xdrift*60*24*365*10^5) ' \mug/yr'])
             disp(['Y drift rate = ' num2str(ydrift*60*24*365*10^5) ' \mug/yr'])
-            
-            figure(12)
-            subplot(211)
-            plot([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log_cor(1:end-1,1)) sum(cal_log_cor(:,1))],'ko:','linewidth',1)
-            hold on
-            datetick
-            title('drift-corrected X segment ends')
-            % adjust timeseries slope as well
-            e0=interp1([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log_cor(1:end-1,1)) sum(cal_log_cor(:,1))],tint(1));
-            e_slope=linspace(eint(1),eint(1)+xdrift*length(eint),length(eint))';
-            subplot(212)
-            plot(tint,eint-e_slope+e0,'b')
-            hold on
-            plot([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log_cor(1:end-1,1)) sum(cal_log_cor(:,1))],'ko--','linewidth',1)
-            datetick
-            title('X data')
             
             figure(121)
             subplot(211)
@@ -473,23 +457,7 @@ for i=1:length(flipstart_min)
             title('after drift correction (X)')
             
             tempx=[tempx; eint-cal1.ax+sum(cal_log_cor(1:end-1,1))-xdrift*24*60*(tint-flipdate_min(i-1))];
-            
-            figure(13)
-            subplot(211)
-            plot([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log_cor(1:end-1,2)) sum(cal_log_cor(:,2))],'ko:','linewidth',1)
-            hold on
-            datetick
-            title('Y segment ends')
-            % adjust timeseries slope as well
-            n0=interp1([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log_cor(1:end-1,2)) sum(cal_log_cor(:,2))],tint(1));
-            n_slope=linspace(nint(1),nint(1)+ydrift*length(nint),length(nint))';
-            subplot(212)
-            plot(tint,nint-n_slope+n0,'b')
-            hold on
-            plot([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log_cor(1:end-1,2)) sum(cal_log_cor(:,2))],'ko','linewidth',1)
-            datetick
-            title('Y data')
-            
+                        
             figure(131)
             subplot(211)
             plot([flipdate_min(i-1) flipdate_min(i)],[sum(cal_log(1:end-1,2)) sum(cal_log(:,2))],'ko--','linewidth',1)
@@ -515,6 +483,8 @@ for i=1:length(flipstart_min)
             plot(tempt,tempx)
             subplot(212)
             plot(tempt,tempy)
+            
+%             keyboard
             
             % demonstrative stitching plot
             if i==19

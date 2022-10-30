@@ -9,171 +9,146 @@ clear; close all;
 
 %%%%%%%%%%CONFIG%%%%%%%%%%
 axial=true;
-lily=true;
+lily=false;
 pf=false;
 
-loaddata=2; %0 - start from scratch, 1 - load from pre-move era, 2 - load from post-move era
-flipfile='../calibrations/Axial/axialdata_newloc.mat'; % only used if loaddata==0
-startdate=datenum(2020,09,11); % datenum(2018,10,13) [only used if loaddata==0]
-tf=floor(now); % datenum('08/27/21');
+loaddata=0; % 0 - start from scratch, 1 - load from pre-move era, 2 - load from post-move era
+
+%-----(un)comment as desired
+flipfile='../calibrations/Axial/axialdata.mat'; % only used if loaddata==0
+% flipfile='../calibrations/Axial/axialdata_newloc.mat'; % only used if loaddata==0
+% flipfile='../calibrations/PF/PFdata.mat'; % only used if loaddata==0
+
+startdate=datenum(2018,10,10); % [only used if loaddata==0]
+% startdate=datenum(2020,09,11); % [only used if loaddata==0]
+% startdate=datenum(2018,10,18); % [only used if loaddata==0]
+
+tf=datenum('09/10/20'); % OOI SCTA moved 9/11/2020
+% tf=datenum('08/27/21'); % OOI SCTA recovered 8/27/2021
+% tf=datenum('03/05/20'); % PF SCTA recovered 3/5/2020
 %%%%%%%%END CONFIG%%%%%%%%
 
-if loaddata==1
-    flipfile='../calibrations/Axial/axialdata.mat';
-    datafile_hr='../calibrations/Axial/axialdata_hr.mat';
-    datafile_min='../calibrations/Axial/axialdata_min.mat';
-elseif loaddata==2
-    flipfile='../calibrations/Axial/axialdata_newloc.mat';
-    datafile_hr='../calibrations/Axial/axialdata_newloc_hr.mat';
-    datafile_min='../calibrations/Axial/axialdata_newloc_min.mat';
-end
-
 if axial
-    sta='AXCC2';
-    dec=[8 10 6 10 6];
-
-    % Load pre-exisiting structure, if it exists
-    if loaddata>0 && exist(datafile_hr,'file')
+    
+    % Load pre-exisiting structure, if requested & it exists
+    if loaddata==1
+        flipfile='../calibrations/Axial/axialdata.mat';
+        datafile_hr='../calibrations/Axial/axialdata_hr.mat';
+        datafile_min='../calibrations/Axial/axialdata_min.mat';
+        load(datafile_hr)
+        load(datafile_min)
+        t0=ceil(data_min.t(end));
+    elseif loaddata==2
+        flipfile='../calibrations/Axial/axialdata_newloc.mat';
+        datafile_hr='../calibrations/Axial/axialdata_newloc_hr.mat';
+        datafile_min='../calibrations/Axial/axialdata_newloc_min.mat';
         load(datafile_hr)
         load(datafile_min)
         t0=ceil(data_min.t(end));
     else
         t0=startdate;
     end
-    
+
+    sta='AXCC2';
+
     % Determine datenums of calibrations
     load(flipfile,'flipInfoAll')
     [daylist,id,~]=unique(floor(flipInfoAll.t));
     
     if t0==startdate
-        data_min.t=[];data_min.MNE=[];data_min.MNN=[];data_min.MNZ=[];
-        data_min.MKA=[];data_min.iflip=[];
-        data_hr.t=[];data_hr.MNE=[];data_hr.MNN=[];data_hr.MNZ=[];
-        data_hr.MKA=[];data_hr.iflip=[];
+        fields={'t','MNE','MNN','MNZ','MXG','MKA','iflip'};
+        for i=1:length(fields)
+            eval(['data_min.' fields{i} '=[];'])
+            eval(['data_hr.' fields{i} '=[];'])
+        end
     end
     
     t1=t0;
     while t1<tf
-        if t1>datenum(2020,05,09) && t1<datenum(2020,06,02) %OOI outage
+        % skip dates when we don't expect data
+        if t1>datenum(2020,05,09) && t1<datenum(2020,06,02) % OOI outage
+            t1=t1+1;
+            continue
+        elseif t1>datenum(2021,01,13) && t1<datenum(2021,01,18) % OOI outage
             t1=t1+1;
             continue
         end
         
+        % download and read in data from 8Hz channels
+        data=[];
         t1_s=datestr(t1,31); t1_s=t1_s(1:10);
-        MNN_string=[sta '_MNN_' t1_s '.miniseed'];
-        MNE_string=[sta '_MNE_' t1_s '.miniseed'];
-        MNZ_string=[sta '_MNZ_' t1_s '.miniseed'];
-        MKA_string=[sta '_MKA_' t1_s '.miniseed'];
-        
-        %attempt download if file not found
-        if ~exist(['../tiltcompare/' sta '/' MNN_string],'file') || ...
-                ~exist(['../tiltcompare/' sta '/' MNE_string],'file') || ...
-                ~exist(['../tiltcompare/' sta '/' MNZ_string],'file') || ...
-                ~exist(['../tiltcompare/' sta '/' MKA_string],'file')
-            IRIS_data_pull(sta,'MNN','--',t1,t1+1);
-            IRIS_data_pull(sta,'MNE','--',t1,t1+1);
-            IRIS_data_pull(sta,'MNZ','--',t1,t1+1);
-            IRIS_data_pull(sta,'MKA','--',t1,t1+1);
-        end
-        %some dates have no data, otherwise import
-        if exist(['../tiltcompare/' sta '/' MNN_string],'file') && ...
-                exist(['../tiltcompare/' sta '/' MNE_string],'file') && ...
-                exist(['../tiltcompare/' sta '/' MNZ_string],'file') && ...
-                exist(['../tiltcompare/' sta '/' MKA_string],'file')
-            %MNN channel
-            temp=rdmseed(['../tiltcompare/' sta '/' MNN_string]);
-            ntemp=double(cat(1,temp.d));
-            %decimate to 1 sample/min
-            ntempd=decimate(ntemp,dec(1),'fir');
-            ntempd=decimate(ntempd,dec(2),'fir');
-            ntempd=decimate(ntempd,dec(3),'fir');
-            %note calibration signal
-            [checkcal,iflip]=max(abs(ntempd));
-            if checkcal/10^7>9
-                data_min.iflip=[data_min.iflip;length(data_min.t)+(iflip-10:iflip+10)'];
+        cha={'MNE','MNN','MNZ','MXG','MKA'};
+        chastr={'a(:,1)','a(:,2)','a(:,3)','as','T'};
+        for m=1:length(cha)
+            %   attempt download if file not found
+            fstring=[sta '_' cha{m} '_' t1_s '.miniseed'];
+            if ~exist(['../tiltcompare/' sta '/' fstring],'file')
+                IRIS_data_pull(sta,cha{m},'--',t1,t1+1);
             end
-            
-            %MNE channel
-            temp=rdmseed(['../tiltcompare/' sta '/' MNE_string]);
-            etemp=double(cat(1,temp.d));
-            %decimate to 1 sample/min
-            etempd=decimate(etemp,dec(1),'fir');
-            etempd=decimate(etempd,dec(2),'fir');
-            etempd=decimate(etempd,dec(3),'fir');
-            
-            %MNZ channel
-            temp=rdmseed(['../tiltcompare/' sta '/' MNZ_string]);
-            ztemp=double(cat(1,temp.d));
-            %decimate to 1 sample/min
-            ztempd=decimate(ztemp,dec(1),'fir');
-            ztempd=decimate(ztempd,dec(2),'fir');
-            ztempd=decimate(ztempd,dec(3),'fir');
-            
-            %MKA channel
-            temp=rdmseed(['../tiltcompare/' sta '/' MKA_string]);
-            Ttemp=double(cat(1,temp.d));
-            %decimate to 1 sample/min
-            Ttempd=decimate(Ttemp,dec(1),'fir');
-            Ttempd=decimate(Ttempd,dec(2),'fir');
-            Ttempd=decimate(Ttempd,dec(3),'fir');
-            
-            %time
-            ttemp=cat(1,temp.t);
-            ttempd=decimate(ttemp,dec(1),'fir');
-            ttempd=decimate(ttempd,dec(2),'fir');
-            ttempd=decimate(ttempd,dec(3),'fir');
-            
-            % if day of move, remove first half day of data
-            if t1==datenum(2020,09,11)
-                cond=ttempd>datenum(2020,09,11,12,0,0);
-                ntempd=ntempd(cond);
-                etempd=etempd(cond);
-                ztempd=ztempd(cond);
-                Ttempd=Ttempd(cond);
-                ttempd=ttempd(cond);
-            end
-            
-            %append
-            if length(ttempd)==length(etempd) && length(ttempd)==length(ntempd) ...
-                    && length(ttempd)==length(ztempd) && length(ttempd)==length(Ttempd)
-                data_min.MNN=[data_min.MNN; ntempd/10^7];
-                data_min.MNE=[data_min.MNE; etempd/10^7];
-                data_min.MNZ=[data_min.MNZ; ztempd/10^7];
-                data_min.MKA=[data_min.MKA; Ttempd/10^7];
-                data_min.t=[data_min.t; ttempd];
-            else
-                warning('vectors have different lengths')
-                keyboard
-            end
-            
-            % hourly version
-            if length(ntempd)>620 %minimum length for decimation filter
-                %decimate all to a sample/hr
-                ntempd=decimate(ntempd,dec(4),'fir'); ntempd=decimate(ntempd,dec(5),'fir');
-                etempd=decimate(etempd,dec(4),'fir'); etempd=decimate(etempd,dec(5),'fir');
-                ztempd=decimate(ztempd,dec(4),'fir'); ztempd=decimate(ztempd,dec(5),'fir');
-                Ttempd=decimate(Ttempd,dec(4),'fir'); Ttempd=decimate(Ttempd,dec(5),'fir');
-                ttempd=decimate(ttempd,dec(4),'fir'); ttempd=decimate(ttempd,dec(5),'fir');
-                %append
-                if length(ttempd)==length(etempd) && length(ttempd)==length(ntempd) ...
-                        && length(ttempd)==length(ztempd) && length(ttempd)==length(Ttempd)
-                    data_hr.MNN=[data_hr.MNN; ntempd/10^7];
-                    data_hr.MNE=[data_hr.MNE; etempd/10^7];
-                    data_hr.MNZ=[data_hr.MNZ; ztempd/10^7];
-                    data_hr.MKA=[data_hr.MKA; Ttempd/10^7];
-                    data_hr.t=[data_hr.t; ttempd];
+            % this redundancy avoids crashing if files weren't found on IRIS
+            if exist(['../tiltcompare/' sta '/' fstring],'file')
+                % read file
+                temp=rdmseed(['../tiltcompare/' sta '/' fstring]);
+                if m==1 % only need to pull time once per data day
+                    data.t=cat(1,temp.t);
+                    eval(['data.' chastr{m} '=cat(1,temp.d)/10^7;']);
                 else
-                    warning('vectors have different lengths')
-                    keyboard
-                end
-                
-                %note calibration signal
-                [checkcal,iflip]=max(abs(median(ntempd)-ntempd));
-                if checkcal/10^7>0.01
-                    data_hr.iflip=[data_hr.iflip;length(data_hr.t)-length(ntempd)+(iflip-2:length(ntempd))'];
+                    atemp=cat(1,temp.d)/10^7;
+                    if length(atemp)==length(data.a)
+                        eval(['data.' chastr{m} '=atemp;']);
+                    else
+                        warning('Length discrepancy')
+                        keyboard
+                    end
                 end
             end
         end
+        
+        if isempty(data)
+            t1=t1+1;
+            continue
+        end
+        
+        % if day of move, remove first half day of data
+        if t1==datenum(2020,09,11)
+            cond=data.t>datenum(2020,09,11,12,0,0);
+            data.t=data.t(cond);
+            data.a=data.a(cond,:);
+            data.as=data.as(cond);
+            data.T=data.T(cond);
+        end
+        
+        % decimate to 1 sample/min
+        dataDecMin=decimate_SCTA(data,60);
+        dataDecHr=decimate_SCTA(data,3600);
+        
+        % note calibration signal
+        [checkcal,iflip]=max(abs(dataDecMin.a(:,1)));
+        if checkcal>2
+            i1=find(dataDecMin.t-floor(dataDecMin.t(1))>=datenum(0,0,0,20,58,0),1);
+            i2=find(dataDecMin.t-floor(dataDecMin.t(1))>=datenum(0,0,0,21,11,0),1);
+            dataDecMin.iflip=(i1:i2)'+length(data_min.t);
+            i1=find(dataDecHr.t-floor(dataDecHr.t(1))>=datenum(0,0,0,20,0,0),1);
+            i2=find(dataDecHr.t-floor(dataDecHr.t(1))>=datenum(0,0,0,22,0,0),1);
+            dataDecHr.iflip=(i1:i2-1)'+length(data_hr.t);
+        else
+            dataDecMin.iflip=[];
+            dataDecHr.iflip=[];
+        end
+        
+        % append
+        fields={'t','MNE','MNN','MNZ','MXG','MKA','iflip'};
+        chastr={'t','a(:,1)','a(:,2)','a(:,3)','as','T','iflip'};
+        for i=1:length(fields)
+            eval(['data_min.' fields{i} '=[data_min.' fields{i} '; dataDecMin.' chastr{i} '];'])
+            eval(['data_hr.' fields{i} '=[data_hr.' fields{i} '; dataDecHr.' chastr{i} '];'])
+        end
+        
+%         if any(t1==floor(flipInfoAll.t))
+%             keyboard
+%         end
+        
+        % move on to next day
         t1=t1+1;
     end
     
@@ -307,7 +282,8 @@ if lily
 end
 
 if pf
-    % Load pre-exisiting structure, if it exists
+    
+    % Load pre-exisiting structure, if requested & it exists
     if loaddata>0 && exist('../calibrations/PinonFlat/PFdata_hr.mat','file')
         load('../calibrations/PinonFlat/PFdata_hr.mat')
         load('../calibrations/PinonFlat/PFdata_min.mat')

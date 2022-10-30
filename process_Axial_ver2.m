@@ -4,11 +4,12 @@
 
 %% Parameters
 % dataLoaded: 0 - need to load from raw files; 1 - append to existing matlab file
-dataLoaded = 1;
+dataLoaded = 0;
 
 % Start and end date
-startDate = datenum('8/1/18');
-% startDate = datenum('09/11/20');
+% startDate = datenum('8/06/18');
+% endDate = datenum('09/10/20'); % SCTA moved 9/11/2020
+startDate = datenum('09/11/20');
 endDate = datenum('08/27/21'); % SCTA recovered 8/27/2021
 if startDate==datenum('09/11/20')
     suffix='_newloc';
@@ -40,95 +41,116 @@ dataDec1 = [];
 dataDec100 = [];
 
 if dataLoaded == 0
+%     % Location 1 manually determined calibrations
+%     cal_list=sort([737280;737281;737282;737290;737313;737320;737327;737341;737348;...
+%         737355;737362;737369;737376;737383;737390;737397;737426;737457;...
+%         737485;737516;737546;737577;737607;737638;737650;737657;737664;...
+%         737671;737678;737713;737730;737760;737798;737805;737812;737819;...
+%         737826;737833;737840;737847;737854;737861;737868;737875;737882;...
+%         737889;737896;737903;737910;737917;737945;737952;737959;737966;...
+%         737973;737980;737987;737994;738001;738008;738015;738022;738029;...
+%         738036;738043])';
+%     for dayn = cal_list
+%     % Location 2 manually determined calibrations
+%     cal_list=sort([738050;738057;738064;738071;738078;738085;738092;738099;738106;...
+%         738113;738120;738134;738141;738148;738155;738176;738183;738190;...
+%         738197;738204;738211;738218;738225;738232;738239;738246;738253;...
+%         738260;738267;738274;738281;738288;738295;738302;738309;738316;...
+%         738323;738366;738367;738368;738369;738371;738372;738373;738374;...
+%         738375;738376;738377;738378;738379;738380;738381;738382;738383;...
+%         738385;738386;738387;738391;738392;738393;738127;738162;738370;...
+%         738384;738388;738389;738390;738394])';
     for dayn = startDate:endDate
         data = get_sctaDay('/Users/erikfred/Google Drive/My Drive/Oceanography/SCTA-Share/OOI-SCTA/ParsedData',dayn);
         
-        if isempty(data.t) && dayn<datenum(2019,08,13) %temporary fix, should apply to entire series
+        % intervals for which we don't expect data
+        if dayn>datenum(2020,05,09) && dayn<=datenum(2020,06,01)
+            % datastream cut during this interval due to cable issues
+            fprintf(['Data outage on ' datestr(dayn) '\n\n'])
+            continue
+        elseif dayn>datenum(2021,01,13) && dayn<=datenum(2021,01,17)
+            % datastream cut during this interval due to cable issues
+            fprintf(['Data outage on ' datestr(dayn) '\n\n'])
+            continue
+        end
+        
+        % parsing issue with some early APL data
+        if dayn==737282
+            icut=2991877:length(data.t);
+            data.t(icut)=[]; data.a(icut,:)=[]; data.as(icut)=[]; data.T(icut)=[];
+            dt=data.t(2)-data.t(1);
+            data.t=[data.t(1:end-1);(data.t(end):dt:dayn+datenum(0,0,0,22,0,0))'];
+            dn=length(data.t)-length(data.as);
+            atemp=repmat(data.a(end,:),dn+1,1);
+            data.a(end:end+dn,:)=atemp;
+            data.as(end:end+dn)=data.as(end);
+            data.T(end:end+dn)=data.T(end);
+        end
+        
+        % load 8 Hz data, as needed
+        if isempty(data.t)
+            fprintf(['No 40Hz data on ' datestr(dayn) '\n\n'])
+            data=[];
+            cha={'MNE','MNN','MNZ','MXG','MKA'};
+            chastr={'a(:,1)','a(:,2)','a(:,3)','as','T'};
+            for m=1:length(cha)
+                IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
+                temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed']);
+                data.t=cat(1,temp.t);
+                eval(['data.' chastr{m} '=cat(1,temp.d)/10^7;']);
+            end
+        else
+            t_base=data.t-floor(data.t(1)); % dateless time
+            t_cal=t_base(t_base>datenum(0,0,0,20,0,0) & t_base<datenum(0,0,0,22,0,0)); % hour before and after calibration
+            count=round(length(t_cal)/40); % ensures calibration interval contains expected # samples
+            if count<7200
+                fprintf(['No 40Hz data on ' datestr(dayn) '\n\n'])
+                data=[];
+                cha={'MNE','MNN','MNZ','MXG','MKA'};
+                chastr={'a(:,1)','a(:,2)','a(:,3)','as','T'};
+                for m=1:length(cha)
+                    IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
+                    temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed']);
+                    data.t=cat(1,temp.t);
+                    eval(['data.' chastr{m} '=cat(1,temp.d)/10^7;']);
+                end
+            end
+        end
+        
+        if dayn==datenum(2020,09,11) % remove first half day of data to account for instrument move
+            cond=data.t>datenum(2020,09,11,12,0,0);
+            data.a=data.a(cond,:);
+            data.as=data.as(cond);
+            data.T=data.T(cond);
+            data.t=data.t(cond);
+        end
+        
+        % Decimate the data
+        [data1DayDec] = decimate_SCTA(data,1);
+        [dataDec1] = decimate_SCTA(data,1,dataDec1);
+        [dataDec100] = decimate_SCTA(data,100,dataDec100);
+        
+        % Find flips using undecimated data
+        [flipInfo,lNormOrt] = find_flip(data1DayDec.t,data1DayDec.a,data1DayDec.as,p);
+        
+        if isempty(flipInfo.t)
             
-            fprintf(['No data on ' datestr(dayn) '\n\n'])
+            fprintf(['No flips found on ' datestr(dayn) '\n\n'])
+            
+        elseif length(flipInfo.t)~=3 && length(flipInfo.t)~=5
+            
+            warning(['Peculiar number of flips found on ' datestr(dayn)])
+            keyboard
             
         else
-            if isempty(data.t) && dayn>=datenum(2019,08,13)
-                data=[];
-                cha={'MNE','MNN','MNZ','MKA'};
-                chastr={'a(:,1)','a(:,2)','a(:,3)','T'};
-                for m=1:length(cha)
-                    IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
-                    temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed']);
-                    data.t=cat(1,temp.t);
-                    eval(['data.' chastr{m} '=cat(1,temp.d)/10^7;']);
-                end
-                data.as=sqrt(data.a(:,1).^2+data.a(:,2).^2+data.a(:,3).^2);
-            end
             
-            if dayn==datenum(2020,09,11) % remove first half day of data to account for instrument move
-                cond=data.t>datenum(2020,09,11,12,0,0);
-                data.a=data.a(cond,:);
-                data.as=data.as(cond);
-                data.T=data.T(cond);
-                data.t=data.t(cond);
-            end
+            % Process Flips
+            flipInfo2 = analyze_flips(data1DayDec,flipInfo,p,1);
             
-            % Decimate the data
-            [data1DayDec] = decimate_SCTA(data,1);
-            [dataDec1] = decimate_SCTA(data,1,dataDec1);
-            [dataDec100] = decimate_SCTA(data,100,dataDec100);
-            
-            % Find flips using undecimated data
-            [flipInfo,lNormOrt] = find_flip(data1DayDec.t,data1DayDec.a,data1DayDec.as,p);
-            
-            if isempty(flipInfo.t)
-                
-                fprintf(['No flips found on ' datestr(dayn) '\n\n'])
-                
-            elseif length(flipInfo.t)~=3 && length(flipInfo.t)~=5
-                
-                warning(['Peculiar number of flips found on ' datestr(dayn)])
-                keyboard
-                
+            if isempty(flipInfoAll)
+                flipInfoAll = flipInfo2;
             else
-                
-                % Process Flips
-                flipInfo2 = analyze_flips(data1DayDec,flipInfo,p,1);
-                
-                if isempty(flipInfoAll)
-                    flipInfoAll = flipInfo2;
-                else
-                    flipInfoAll = merge_oneElementStructure(flipInfoAll, flipInfo2, 'normalOrientation');
-                end
-            end
-            
-            if isempty(flipInfo.t) && dayn>datenum(2018,12,15) && str2double(datestr(dayn,'dd'))==1 || ...
-                    (isempty(flipInfo.t) && dayn>=datenum(2019,8,13) && dayn<datenum(2019,11,30) && strcmp(datestr(dayn,'ddd'),'Tue')) || ...
-                    (isempty(flipInfo.t) && dayn>=datenum(2019,11,30) && dayn<datenum(2020,01,08) && str2double(datestr(dayn,'dd'))==1) ||...
-                    (isempty(flipInfo.t) && dayn>=datenum(2020,01,08) && strcmp(datestr(dayn,'ddd'),'Wed'))
-                data=[];
-                cha={'MNE','MNN','MNZ','MKA'};
-                chastr={'a(:,1)','a(:,2)','a(:,3)','T'};
-                for m=1:length(cha)
-                    IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
-                    temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed']);
-                    data.t=cat(1,temp.t);
-                    eval(['data.' chastr{m} '=cat(1,temp.d)/10^7;']);
-                end
-                data.as=sqrt(data.a(:,1).^2+data.a(:,2).^2+data.a(:,3).^2);
-                
-                if dayn==datenum(2020,09,11) % remove first half day of data to account for instrument move
-                    cond=data.t>datenum(2020,09,11,12,0,0);
-                    data.a=data.a(cond);
-                    data.as=data.as(cond);
-                    data.T=data.T(cond);
-                    data.t=data.t(cond);
-                end
-                
-                [data1DayDec] = decimate_SCTA(data,1);
-                [flipInfo,lNormOrt] = find_flip(data1DayDec.t,data1DayDec.a,data1DayDec.as,p);
-                flipInfo2 = analyze_flips(data1DayDec,flipInfo,p,1);
-                if isempty(flipInfoAll)
-                    flipInfoAll = flipInfo2;
-                else
-                    flipInfoAll = merge_oneElementStructure(flipInfoAll, flipInfo2, 'normalOrientation');
-                end
+                flipInfoAll = merge_oneElementStructure(flipInfoAll, flipInfo2, 'normalOrientation');
             end
         end
     end
@@ -142,89 +164,77 @@ elseif dataLoaded==1
     startDate2=floor(dataDec1.t(end))+1;
     
     for dayn = startDate2:endDate
-        data = get_sctaDay('/Volumes/GoogleDrive/My Drive/Oceanography/SCTA-Share/OOI-SCTA/ParsedData',dayn);
+        data = get_sctaDay('/Users/erikfred/Google Drive/My Drive/Oceanography/SCTA-Share/OOI-SCTA/ParsedData',dayn);
         
-        if isempty(data.t) && dayn<datenum(2019,08,13) %temporary fix, should apply to entire series
+        % intervals for which we don't expect data
+        if dayn>datenum(2020,05,09) && dayn<=datenum(2020,06,01)
+            % datastream cut during this interval due to cable issues
+            fprintf(['Data outage on ' datestr(dayn) '\n\n'])
+            continue
+        elseif dayn>datenum(2021,01,13) && dayn<=datenum(2021,01,17)
+            % datastream cut during this interval due to cable issues
+            fprintf(['Data outage on ' datestr(dayn) '\n\n'])
+            continue
+        end
+        
+        % load 8 Hz data, as needed
+        if isempty(data.t)
+            fprintf(['No 40Hz data on ' datestr(dayn) '\n\n'])
+            data=[];
+            cha={'MNE','MNN','MNZ','MXG','MKA'};
+            chastr={'a(:,1)','a(:,2)','a(:,3)','as','T'};
+            for m=1:length(cha)
+                IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
+                temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed']);
+                data.t=cat(1,temp.t);
+                eval(['data.' chastr{m} '=cat(1,temp.d)/10^7;']);
+            end
+        else
+            t_base=data.t-floor(data.t(1)); % dateless time
+            t_cal=t_base(t_base>datenum(0,0,0,21,0,0) & t_base<datenum(0,0,0,23,0,0)); % hour before and after calibration
+            count=round(length(t_cal)/40); % ensures calibration interval contains expected # samples
+            if count<7200
+                fprintf(['No 40Hz data on ' datestr(dayn) '\n\n'])
+                data=[];
+                cha={'MNE','MNN','MNZ','MXG','MKA'};
+                chastr={'a(:,1)','a(:,2)','a(:,3)','as','T'};
+                for m=1:length(cha)
+                    IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
+                    temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed']);
+                    data.t=cat(1,temp.t);
+                    eval(['data.' chastr{m} '=cat(1,temp.d)/10^7;']);
+                end
+            end
+        end
+        
+        % Decimate the data
+        [data1DayDec] = decimate_SCTA(data,1);
+        [dataDec1] = decimate_SCTA(data,1,dataDec1);
+        [dataDec100] = decimate_SCTA(data,100,dataDec100);
+        
+        % Find flips
+        [flipInfo,lNormOrt] = find_flip(data1DayDec.t,data1DayDec.a,data1DayDec.as,p);
+        
+        if isempty(flipInfo.t)
             
-            fprintf(['No data on ' datestr(dayn) '\n\n'])
+            fprintf(['No flips found on ' datestr(dayn) '\n\n'])
+            
+        elseif length(flipInfo.t)~=3 && length(flipInfo.t)~=5
+            
+            warning(['Peculiar number of flips found on ' datestr(dayn)])
+            keyboard
             
         else
             
-            fprintf(['No 40Hz data on ' datestr(dayn) '\n\n'])
+            % Process Flips
+            flipInfo2 = analyze_flips(data1DayDec,flipInfo,p,1);
             
-            if dayn>datenum(2020,05,09) && dayn<=datenum(2020,06,01)
-                % datastream cut during this interval due to cable issues
-                continue
-            elseif dayn>datenum(2021,01,13) && dayn<=datenum(2021,01,17)
-                % datastream cut during this interval due to cable issues
-                continue
-            elseif isempty(data.t) && dayn>=datenum(2019,08,13)
-                data=[];
-                cha={'MNE','MNN','MNZ','MKA'};
-                chastr={'a(:,1)','a(:,2)','a(:,3)','T'};
-                for m=1:length(cha)
-                    IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
-                    temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed']);
-                    data.t=cat(1,temp.t);
-                    eval(['data.' chastr{m} '=cat(1,temp.d)/10^7;']);
-                end
-                data.as=sqrt(data.a(:,1).^2+data.a(:,2).^2+data.a(:,3).^2);
-            end
-            
-            % Decimate the data
-            [data1DayDec] = decimate_SCTA(data,1);
-            [dataDec1] = decimate_SCTA(data,1,dataDec1);
-            [dataDec100] = decimate_SCTA(data,100,dataDec100);
-            
-            % Find flips
-            [flipInfo,lNormOrt] = find_flip(data1DayDec.t,data1DayDec.a,data1DayDec.as,p);
-            
-            if isempty(flipInfo.t)
-                
-                fprintf(['No flips found on ' datestr(dayn) '\n\n'])
-                
-            elseif length(flipInfo.t)~=3 && length(flipInfo.t)~=5
-                
-                warning(['Peculiar number of flips found on ' datestr(dayn)])
-                keyboard
-                
+            if isempty(flipInfoAll)
+                flipInfoAll = flipInfo2;
             else
-                
-                % Process Flips
-                flipInfo2 = analyze_flips(data1DayDec,flipInfo,p,1);
-                
-                if isempty(flipInfoAll)
-                    flipInfoAll = flipInfo2;
-                else
-                    flipInfoAll = merge_oneElementStructure(flipInfoAll, flipInfo2, 'normalOrientation');
-                end
+                flipInfoAll = merge_oneElementStructure(flipInfoAll, flipInfo2, 'normalOrientation');
             end
-            
-            if (isempty(flipInfo.t) && dayn<datenum(2019,8,13) && str2double(datestr(dayn,'dd'))==1) || ...
-                    (isempty(flipInfo.t) && dayn>=datenum(2019,8,13) && dayn<datenum(2019,11,30) && strcmp(datestr(dayn,'ddd'),'Tue')) || ...
-                    (isempty(flipInfo.t) && dayn>=datenum(2019,11,30) && dayn<datenum(2020,01,08) && str2double(datestr(dayn,'dd'))==1) ||...
-                    (isempty(flipInfo.t) && dayn>=datenum(2020,01,08) && strcmp(datestr(dayn,'ddd'),'Wed'))
-                data=[];
-                cha={'MNE','MNN','MNZ','MKA'};
-                chastr={'a(:,1)','a(:,2)','a(:,3)','T'};
-                for m=1:length(cha)
-                    IRIS_data_pull('AXCC2',cha{m},'--',dayn,dayn+1)
-                    temp=rdmseed(['../tiltcompare/AXCC2/AXCC2_' cha{m} '_' datestr(dayn,29) '.miniseed']);
-                    data.t=cat(1,temp.t);
-                    eval(['data.' chastr{m} '=cat(1,temp.d)/10^7;']);
-                end
-                data.as=sqrt(data.a(:,1).^2+data.a(:,2).^2+data.a(:,3).^2);
-                
-                [data1DayDec] = decimate_SCTA(data,1);
-                [flipInfo,lNormOrt] = find_flip(data1DayDec.t,data1DayDec.a,data1DayDec.as,p);
-                flipInfo2 = analyze_flips(data1DayDec,flipInfo,p,1);
-                if isempty(flipInfoAll)
-                    flipInfoAll = flipInfo2;
-                else
-                    flipInfoAll = merge_oneElementStructure(flipInfoAll, flipInfo2, 'normalOrientation');
-                end
-            end
-        end 
+        end
     end
     
     dataDec1 = NANgap_scta(dataDec1);
